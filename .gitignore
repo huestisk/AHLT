@@ -1,8 +1,10 @@
-# Data
+# Additional
 data/
 papers/
 resources/
 .vscode/
+exercises/
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
