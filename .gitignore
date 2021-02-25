@@ -5,6 +5,7 @@ resources/
 .vscode/
 exercises/
 .DS_Store
+outfile.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

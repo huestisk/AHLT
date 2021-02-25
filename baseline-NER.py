@@ -2,7 +2,7 @@ import sys
 import os
 from xml.dom.minidom import parse
 
-# from eval.evaluator import evaluate
+from eval.evaluator import evaluate
 from src.tokenize import tokenize
 from src.extract_entities import extract_entities
 
@@ -34,4 +34,4 @@ for f in os.listdir(datadir):
                 print(sid+"|"+e["offset"]+"|"+e["text"]+"|"+e["type"], file=f)
 
 # print performance score
-# evaluate("NER", datadir, outfile)
+evaluate("NER", datadir, outfile)

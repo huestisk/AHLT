@@ -1,7 +1,10 @@
 from nltk.tokenize import word_tokenize
 import re
 
-specialchars = {'(', ')', '[', ']', '*', '+'}
+# import nltk
+# nltk.download('punkt')
+
+specialchars = ('(', ')', '[', ']', '*', '+', '?')
 
 def tokenize(s):
 	"""
@@ -25,7 +28,7 @@ def tokenize(s):
 	tokens = []
 	shift = 0
 	for word in tokens0:
-		if word in specialchars: word = "\\" + word # FIXME
+		if word.startswith(specialchars): word = "\\" + word # FIXME
 		ans = re.search(word, s[shift:])
 		if ans is None: continue
 		start = ans.start() + shift
