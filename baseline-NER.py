@@ -16,7 +16,7 @@ if os.path.exists(outfile):
 # process each file in directory
 for f in os.listdir(datadir):
     # parse XML file , obtaining a DOM tree
-    tree = parse(datadir + "/" + f)
+    tree = parse(datadir + f)
     # process each sentence in the file
     sentences = tree.getElementsByTagName("sentence")
     for s in sentences:

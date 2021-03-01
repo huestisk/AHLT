@@ -33,6 +33,6 @@ def tokenize(s):
 		if ans is None: continue
 		start = ans.start() + shift
 		shift += ans.end()
-		tokens.append((word, start, shift))
+		tokens.append((word, start, shift-1))
 
 	return tokens

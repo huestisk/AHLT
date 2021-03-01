@@ -1,8 +1,33 @@
 
+drugbank = './resources/DrugBank.txt'
+hsbd = './resources/HSDB.txt'
+
+drugs = []
+brands = []
+groups = []
+
+with open(hsbd, 'r') as f:
+	drugs = f.read().splitlines()
+
+with open(drugbank, 'r') as f: # TODO: Make more efficient
+	for line in f.readlines():
+		raw = line.split('|')
+		if raw[1] == "drug\n":
+			drugs.append(raw[0])
+		elif raw[1] == "brand\n":
+			brands.append(raw[0])
+		elif raw[1] == "group\n":
+			groups.append(raw[0])
 
 def get_entity_type(word, before, after):
-	# TODO: presence of numbers, add lists to check, capitalization
-	if before =='(' and after == ')':
+	# TODO: presence of numbers, partial capitalization
+	if word in drugs:
+		return "drug"
+	elif word in brands:
+		return "brand"
+	elif word in groups:
+		return "group"
+	elif before =='(' and after == ')':
 		return "drug"
 	elif before =='[' and after == ']':
 		return "drug"
