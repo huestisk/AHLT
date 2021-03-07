@@ -10,6 +10,7 @@ from src.extract_entities import extract_entities
 datadir = sys.argv[1]
 outfile = sys.argv[2]
 
+# delete old file
 if os.path.exists(outfile): 
     os.remove(outfile)
 
@@ -24,10 +25,8 @@ for f in os.listdir(datadir):
         stext = s.attributes["text"].value  # get sentence text
         # tokenize text
         tokens = tokenize(stext)
-
         # extract entities from tokenized sentence text
         entities = extract_entities(tokens)
-
         # print sentence entities in format requested for evaluation
         for e in entities:
             with open(outfile, 'a') as f:

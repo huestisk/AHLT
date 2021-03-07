@@ -9,7 +9,7 @@ groups = []
 with open(hsbd, 'r') as f:
 	drugs = f.read().splitlines()
 
-with open(drugbank, 'r') as f: # TODO: Make more efficient
+with open(drugbank, 'r') as f:
 	for line in f.readlines():
 		raw = line.split('|')
 		if raw[1] == "drug\n":
