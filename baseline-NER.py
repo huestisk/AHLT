@@ -3,8 +3,8 @@ import os
 from xml.dom.minidom import parse
 
 from eval.evaluator import evaluate
-from src.tokenize import tokenize
-from src.extract_entities import extract_entities
+from helper_functions import tokenize
+from extract_entities import extract_entities
 
 # parse arguments
 datadir = sys.argv[1]

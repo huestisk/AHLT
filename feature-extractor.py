@@ -2,9 +2,7 @@ import sys
 import os
 from xml.dom.minidom import parse
 
-from src.tokenize import tokenize
-from src.extract_features import extract_features
-from src.get_tag import get_tag
+from helper_functions import tokenize, extract_features, get_tag
 
 # parse arguments
 datadir = sys.argv[1]
@@ -31,8 +29,8 @@ for f in os.listdir(datadir):
             offset = e.attributes["charOffset"].value
             (start, end) = offset.split(";")[0].split("-")
             gold.append((int(start), int(end), e.attributes["type"].value))
-            # tokenize  
-            texttokens = tokenize(stext)
+            # tokenize text
+            tokens = tokenize(stext)
             # extract features for each word in the sentence
             features = extract_features(tokens)
             # print features in format suitable for the learner/classifier
