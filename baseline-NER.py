@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 from xml.dom.minidom import parse
 
 from eval.evaluator import evaluate

@@ -9,7 +9,7 @@ datadir = sys.argv[1]
 outfile = sys.argv[2]
 
 # delete old file
-if os.path.exists(outfile): 
+if os.path.exists(outfile):
     os.remove(outfile)
 
 # process each file in directory
@@ -34,18 +34,12 @@ for f in os.listdir(datadir):
             # extract features for each word in the sentence
             features = extract_features(tokens)
             # print features in format suitable for the learner/classifier
-            for i in range(0,len(tokens)):
+            for i in range(0, len(tokens)):
                 # see if the token is part of an entity, and which part (B/I)
                 tag = get_tag(tokens[i], gold)
                 with open(outfile, 'a') as f:
-                    print(sid , tokens[i][0], tokens[i][1], tokens[i][2],
-                        tag, "\t".join(features[i]), sep='\t', file=f)
-            # blank line to separate sentences 
+                    print(sid, tokens[i][0], tokens[i][1], tokens[i][2], tag, "\t".join(
+                        features[i]), sep='\t', file=f)
+            # blank line to separate sentences
             with open(outfile, 'a') as f:
-                print('\n', file=f)
-
-
-
-
-
-
+                print('', file=f)

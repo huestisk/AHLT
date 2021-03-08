@@ -1,6 +1,7 @@
 # import nltk
 # nltk.download('punkt')
 
+import re
 from nltk.tokenize import word_tokenize
 specialchars = ('(', ')', '[', ']', '*', '+', '?')
 
@@ -100,4 +101,13 @@ def get_tag(token, gold):
         B-brand
     '''
 
-    pass
+    for truth in gold:
+        if token[1] == truth[0] and token[2] <= truth[1]:
+            return "B-" + truth[2]
+        elif token[1] > truth[0] and token[2] <= truth[1]:
+            return "I-" + truth[2]
+
+    return "0"
+
+
+
