@@ -55,15 +55,33 @@ def extract_entities(s):
 		[{" name ":" Ascorbic acid", "offset ":"0-12", "type ":"drug"}, {"name ":" aspirin", "offset ":"15-21", "type ": "brand"}]
 	"""
 	entities = []
-
-	# TODO: Add n-grams
-
+	save_bigram = False
 	for idx, token in enumerate(s):
+		if save_bigram:
+			entity = {
+				"text": bigram,
+				"offset": str(start) + "-" + str(token[2]),
+				"type": entity_type
+			}
+
+			entities.append(entity)
+			save_bigram = False
+			continue
 
 		word = token[0]
 		before = s[idx-1][0] if idx != 0 else None
-		after = s[idx-1][0] if idx != len(s)-1 else None 
+		after = s[idx+1][0] if idx != len(s)-1 else None
 
+		# if after is not None:
+		# 	bigram = word + ' ' + after
+		# 	after_bigram = s[idx+2][0] if idx != len(s)-2 else None
+		# 	entity_type = get_entity_type(word, before, after_bigram)
+
+		# 	if entity_type is not None:
+		# 		save_bigram = True
+		# 		start = token[1]
+		# 		continue
+	
 		entity_type = get_entity_type(word, before, after)
 
 		if entity_type is None:
