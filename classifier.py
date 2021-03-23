@@ -11,7 +11,6 @@ from eval.evaluator import evaluate
 
 # Output file
 outfile = sys.argv[2]
-# delete old file
 if os.path.exists(outfile):
     os.remove(outfile)
 
@@ -45,26 +44,21 @@ labels = results[idx]
 lines = set()
 prevPos = None
 prevLabel = None
+prevDocId = None
 for token, label in zip(tokens, labels):
     
+    docId = token[0]
     pos, fLabel = label.split('-')
 
-    docId = token[0]
-    start = token[2]
-    end = token[3]
-    name = token[1]
+    if pos == 'I' and prevPos == 'B' and docId == prevDocId and prevLabel == fLabel and int(end)+2 == int(token[2]): 
+        # If tag is I, previous tag is B (with same document ID and label) and they follow each other 
+        lines.pop()     # remove previous, since it will be combined
+        name += " " + token[1]
+    else:
+        name = token[1]
+        start = token[2]
 
-    # if pos == 'I' and docId == token[0] and int(end)+2 == int(token[2]):
-    #     end = token[3]
-    #     name += " " + token[1]
-    #     lines.pop()
-    # elif pos != 'B':
-    #     print('Error')
-    # else:
-    #     docId = token[0]
-    #     start = token[2]
-    #     end = token[3]
-    #     name = token[1]
+    end = token[3]
         
     lines.add(
         "{}|{}-{}|{}|{}".format(docId, start, end, name, fLabel)
@@ -72,6 +66,7 @@ for token, label in zip(tokens, labels):
 
     prevPos = pos
     prevLabel = fLabel
+    prevDocId = docId
 
 for line in lines:
     with open(outfile, 'a') as f:
