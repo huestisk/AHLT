@@ -1,5 +1,4 @@
 import sys
-import pickle
 import numpy as np
 
 import pycrfsuite
@@ -12,14 +11,21 @@ with open(datafile, 'r') as f:
     data = f.readlines()
 
 # Preprocessing
-data = np.array([np.array(line[:-1].split('\t'))
-                 for line in data if line != '\n'])
-classes = data[:, 4]
-features = data[:, 5:]
+data = [line[:-1].split('\t') for line in data]
+X_train = []
+y_train = []
+x_seq = []
+y_seq = []
 
-
-
-# TODO:
+for line in data:
+    if line[0] == '':
+        X_train.append(x_seq)
+        x_seq = []
+        y_train.append(y_seq)
+        y_seq = []
+    else:
+        x_seq.append(line[5:])
+        y_seq.append(line[4])
 
 trainer = pycrfsuite.Trainer(verbose=False)
 
@@ -38,10 +44,5 @@ trainer.set_params({
 
 trainer.train(outfile)
 
-
-
-# Classifier
-tagger = pycrfsuite.Tagger()
-tagger.open(outfile)
 
 

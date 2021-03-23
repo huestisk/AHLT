@@ -70,7 +70,7 @@ def extract_features(s):
     f3 = f3[1:] + ["next=_EoS_"]
     # previous token
     f4 = ["prev=" + token for token in tokens]
-    f4 = ["prev=_BoS_"] + f4[:-1]
+    f4 = ["prev=_BoS_"] + f4[:-1]   
     
     return list(zip(f1, f2, f3, f4))
 
