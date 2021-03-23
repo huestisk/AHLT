@@ -39,15 +39,8 @@ if CHECK_EXTERNAL:
     drugbank = './resources/DrugBank.txt'
     hsbd = './resources/HSDB.txt'
 
-    drugs = []
     brands = []
     groups = []
-
-    drug_suffixes = ['racin', 'NaFlu','teine', 'butin','ampin', 'navir', 'azone', 'ncers', 'moter', 'orine', 'limus', 'ytoin', 'angin', 'ucose', 'sulin', 'odone', 'xacin', 'udine', 'osine', 'zepam', 'hacin', 'etine', 'pride', 'ridol', 'apine', 'idone', 'apine', 'nafil', 'otine', 'oxide', 'iacin', 'tatin', 'cline', 'kacin','xacin', 'illin', 'azole', 'idine', 'amine', 'mycin', 'tatin', 'ridin', 'caine', 'micin', 'hanol', 'dolac', 'feine', 'lline', 'amide', 'afine', 'rafin', 'trast','goxin', 'coxib', 'phine', 'coids', 'isone', 'oride', 'ricin', 'lipin', 'cohol', 'otine', 'taxel', 'tinib', 'rbose', 'ipine', 'idine', 'nolol', 'uride', 'lurea', 'ormin', 'amide', 'estin']
-    # plural of drugs can be group names
-    group_suffixes = [s + "s" for s in drug_suffixes]
-    group_suffixes = [s[1:] for s in group_suffixes]
-    group_suffixes = group_suffixes + ['trate', 'otics', 'pioid', 'zones', ]
 
     with open(hsbd, 'r') as f:
         drugs = f.read().splitlines()
