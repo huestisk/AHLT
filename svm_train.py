@@ -23,9 +23,9 @@ X = feat_encoder.fit_transform(features)
 pickle.dump(feat_encoder, open('encoder.pkl','wb'))
 
 # Create & train model
-svm = LinearSVC(verbose=0)
+svm = LinearSVC(dual=False, class_weight='balanced', max_iter=5000)
 svm.fit(X, classes)
-pickle.dump(svm, open('svm.model','wb'))
+pickle.dump(svm, open(outfile,'wb'))
 
 # Eval
 train_acc = svm.score(X, classes)

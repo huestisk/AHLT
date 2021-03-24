@@ -6,6 +6,9 @@ import pycrfsuite
 
 from eval.evaluator import evaluate
 
+CHECK_EXTERNAL = True
+
+
 model = sys.argv[1]
 
 # Output file
@@ -17,6 +20,26 @@ if os.path.exists(outfile):
 datafile = sys.argv[2]
 with open(datafile, 'r') as f:
     data = f.readlines()
+
+if CHECK_EXTERNAL:
+    drugbank = './resources/DrugBank.txt'
+    hsbd = './resources/HSDB.txt'
+
+    brands = []
+    groups = []
+
+    with open(hsbd, 'r') as f:
+        drugs = f.read().splitlines()
+
+    with open(drugbank, 'r') as f:
+        for line in f.readlines():
+            raw = line.split('|')
+            if raw[1] == "drug\n":
+                drugs.append(raw[0])
+            elif raw[1] == "brand\n":
+                brands.append(raw[0])
+            elif raw[1] == "group\n":
+                groups.append(raw[0])
 
 # Preprocessing
 data = [line[:-1].split('\t') for line in data]
@@ -46,19 +69,27 @@ prevLabel = None
 prevDocId = None
 for token, label in zip(tokens, labels):
 
+    if CHECK_EXTERNAL and label == '0':  # override result
+        if token[1] in drugs:
+            label = "B-drug"
+        elif token[1] in brands:
+            label = "B-brand"
+        elif token[1] in groups:
+            label = "B-group"
+    
     if label == '0':
         continue
     
     docId = token[0]
     pos, fLabel = label.split('-')
 
-    if pos == 'I' and prevPos == 'B' and docId == prevDocId and prevLabel == fLabel and int(end)+2 == int(token[2]): 
-        # If tag is I, previous tag is B (with same document ID and label) and they follow each other 
-        lines.pop()     # remove previous, since it will be combined
-        name += " " + token[1]
-    else:
-        name = token[1]
-        start = token[2]
+    # if False and pos == 'I' and prevPos == 'B' and docId == prevDocId and prevLabel == fLabel and int(end)+2 == int(token[2]): 
+    #     # If tag is I, previous tag is B (with same document ID and label) and they follow each other 
+    #     lines.pop()     # remove previous, since it will be combined
+    #     name += " " + token[1]
+    # else:
+    name = token[1]
+    start = token[2]
 
     end = token[3]
         

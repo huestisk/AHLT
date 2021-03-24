@@ -61,18 +61,33 @@ def extract_features(s):
     '''
 
     tokens = [i for i,j,k in s]
+    bias = ['bias'] * len(tokens)
     # full token
-    f1 = ["form=" + token for token in tokens]
+    f1 = ["form=" + token.lower() for token in tokens]
     # last four characters
-    f2 = ["suf4=" + token[-4:] for token in tokens]
+    f2 = ["suf4=" + token[-4:].lower() for token in tokens]
     # next token
-    f3 = ["next=" + token for token in tokens]
+    f3 = ["next=" + token.lower() for token in tokens]
     f3 = f3[1:] + ["next=_EoS_"]
     # previous token
-    f4 = ["prev=" + token for token in tokens]
-    f4 = ["prev=_BoS_"] + f4[:-1]   
-    
-    return list(zip(f1, f2, f3, f4))
+    f4 = ["prev=" + token.lower() for token in tokens]
+    f4 = ["prev=_BoS_"] + f4[:-1]
+    # last three characters
+    f5 = ["suf3=" + token[-3:].lower() for token in tokens]
+    # last five characters
+    f6 = ["suf5=" + token[-5:].lower() for token in tokens]
+    # uppercase
+    f7 = ["upper=%s" % token.isupper() for token in tokens]
+    # are there numbers
+    f8 = ["digit=%s" % any((char.isdigit() for char in token)) for token in tokens]
+    # last 4 next token
+    f9 = ["-4next=" + token[-4:].lower() for token in tokens]
+    f9 = f9[1:] + ["-4next=_EoS_"]
+    # last 4 previous token
+    f10 = ["-4prev=" + token[-4:].lower() for token in tokens]
+    f10 = ["-4prev=_BoS_"] + f10[:-1]
+
+    return list(zip(bias, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10))
 
 
 
