@@ -1,7 +1,10 @@
 import os
 import sys
 from xml.dom.minidom import parse
+
+from eval.evaluator import evaluate
 from helper_functions_DDI import analyze, check_interaction
+
 # parse arguments
 datadir = sys.argv[1]
 outfile = sys.argv[2]
@@ -21,7 +24,7 @@ for f in os.listdir(datadir):
         stext = s.attributes["text"]. value  # get sentence text
         # load sentence entities into a dictionary
         entities = {}
-        ents = s.getElementsByTagName ("entity")
+        ents = s.getElementsByTagName("entity")
         for e in ents:
             eid = e.attributes["id"].value
             entities[eid] = e.attributes["charOffset"].value.split("-")
@@ -34,6 +37,7 @@ for f in os.listdir(datadir):
             id_e2 = p.attributes["e2"].value
             ddi_type = check_interaction(analysis, entities, id_e1, id_e2)
             if ddi_type is not None:
-                print(sid +"|"+ id_e1 +"|"+ id_e2 +"|"+ ddi_type, file=f)
+                with open(outfile, 'a') as f:
+                    print(sid + "|" + id_e1 + "|" + id_e2 + "|" + ddi_type, file=f)
 # get performance score
-#evaluator.evaluate ("DDI", datadir, outfile)
+evaluate("DDI", datadir, outfile)
