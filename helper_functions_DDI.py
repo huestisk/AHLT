@@ -1,3 +1,7 @@
+#import nltk CoreNLP module(just once)
+from nltk.parse.corenlp import CoreNLPDependencyParser
+
+
 def analyze(s):
     """
     Task: Given one sentence , sends it to CoreNLP to obtain the tokens , tags , and
@@ -27,6 +31,10 @@ def analyze(s):
     ’,’ start ’:33 , ’ end ’:41} ,
     7:{ ’ word ’:’ resorcinol ’,’head ’:6 , ’ lemma ’:’ resorcinol ’,’rel ’:’ dobj ’,’tag ’:’NN
     """
+    # connect to your CoreNLP server (just once)
+    my_parser = CoreNLPDependencyParser(url="http://localhost:9000")
+    # parse text (as many times as needed). Watch the comma!
+    mytree, = my_parser.raw_parse(s)
     return
 
 
@@ -41,4 +49,5 @@ def check_interaction(analysis, entities, e1, e2):
     Output: Returns the type of interaction( ’ effect ’, ’mechanism ’, ’advice’, ’int ’) between
     e1 and e2 expressed by the sentence, or ’None ’ if no interaction is described.
     """
+
     return
