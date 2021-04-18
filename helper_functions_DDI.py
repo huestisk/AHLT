@@ -72,5 +72,40 @@ def check_interaction(analysis, entities, e1, e2):
 
     Output: Returns the type of interaction(’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
     """
+    clues_effect = ['administer', 'potentiate', 'prevent']
+    clues_mechanism = ['reduce', 'increase', 'decrease']
+    clues_int = ['interact', 'interaction']
+
+    #ids for entities
+    id_e1 = int(e1[-1])
+    id_e2 = int(e2[-1])
+
+    # Get offsets for entities (not used yet)
+    for e in entities:
+        if e == e1:
+            e1_offset = entities[e]
+        elif e == e2:
+            e2_offset = entities[e]
+
+
+    if len(entities) > 2:
+        #print("***********")
+        #print("analysis: ", len(analysis.nodes))
+        #print("e1 :", id_e1, "e2 :", id_e2)
+        #print("len entities:", len(entities))
+
+        # check words between e1 and e2, naive but a first step for comparison
+        for idx in range(id_e1+1, id_e2):
+            node = analysis.nodes[idx]
+            word = node['word']
+
+            # print(node)
+
+            if word in clues_effect:
+                return 'effect'
+            elif word in clues_mechanism:
+                return 'mechanism'
+            elif word in clues_int:
+                return 'int'
 
     return 'effect'
