@@ -72,40 +72,74 @@ def check_interaction(analysis, entities, e1, e2):
 
     Output: Returns the type of interaction(’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
     """
-    clues_effect = ['administer', 'potentiate', 'prevent']
-    clues_mechanism = ['reduce', 'increase', 'decrease']
-    clues_int = ['interact', 'interaction']
+    clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
+    clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases', 'decreased']
+    clues_int = ['interact', 'interaction', 'interacts', 'interactions']
+    clues_advise = ['should', 'recommended']
 
     #ids for entities
     id_e1 = int(e1[-1])
     id_e2 = int(e2[-1])
 
     # Get offsets for entities (not used yet)
+    # Are these of use here?
     for e in entities:
         if e == e1:
             e1_offset = entities[e]
         elif e == e2:
             e2_offset = entities[e]
 
+    #for i in reversed(range(id_e2)):
+    node_e1 = analysis.nodes[id_e1]
+    node_e2 = analysis.nodes[id_e2]
+    head_e1 = node_e1['head']
+    head_e2 = node_e2['head']
+
+
+
+    # TODO What type of interaction should be returned here
+    if head_e2 == head_e1:
+        #print("UNDER THE SAME WORD")
+        node = analysis.nodes[id_e2]
+        if node['ctag'] == 'VB':
+            #print("UNDER THE SAME VERB")
+            return 'int'
+
+    # TODO What type of interaction should be returned here
+
+    # Check if e1 or e2 is over/under each other
+    #TODO iterate further heads
+    #TODO What type of interaction should be returned here
+    elif head_e1 == id_e2:
+        #print("E2 IS OVER E1")
+        pass
+    elif head_e2 == id_e1:
+        #print("E1 IS OVER E2")
+        pass
 
     if len(entities) > 2:
-        #print("***********")
-        #print("analysis: ", len(analysis.nodes))
-        #print("e1 :", id_e1, "e2 :", id_e2)
-        #print("len entities:", len(entities))
 
         # check words between e1 and e2, naive but a first step for comparison
         for idx in range(id_e1+1, id_e2):
             node = analysis.nodes[idx]
             word = node['word']
+            lemma = node['lemma']
 
-            # print(node)
+            #print(node)
 
-            if word in clues_effect:
+            if word or lemma in clues_effect:
                 return 'effect'
-            elif word in clues_mechanism:
+            elif word or lemma in clues_mechanism:
                 return 'mechanism'
-            elif word in clues_int:
+            elif word or lemma in clues_int:
                 return 'int'
+            elif word or lemma in clues_advise:
+                return 'advise'
 
-    return 'effect'
+    next_node_e1 = analysis.nodes[id_e1 + 1]
+    next_node_e2 = analysis.nodes[id_e2 + 1]
+
+    if next_node_e1['word'] or next_node_e2['word'] in clues_advise:
+        return 'advise'
+
+    return None
