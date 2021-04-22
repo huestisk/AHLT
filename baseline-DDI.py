@@ -2,7 +2,7 @@ import os
 import sys
 from xml.dom.minidom import parse
 
-from eval.evaluator import evaluate
+#from eval.evaluator import evaluate
 from helper_functions_DDI import analyze, check_interaction
 
 # parse arguments
@@ -21,7 +21,7 @@ for f in os.listdir(datadir):
     sentences = tree.getElementsByTagName("sentence")
     for s in sentences:
         sid = s.attributes["id"].value  # get sentence id
-        stext = s.attributes["text"]. value  # get sentence text
+        stext = s.attributes["text"].value  # get sentence text
         # load sentence entities into a dictionary
         entities = {}
         ents = s.getElementsByTagName("entity")
@@ -40,4 +40,4 @@ for f in os.listdir(datadir):
                 with open(outfile, 'a') as f:
                     print(sid + "|" + id_e1 + "|" + id_e2 + "|" + ddi_type, file=f)
 # get performance score
-evaluate("DDI", datadir, outfile)
+#evaluate("DDI", datadir, outfile)
