@@ -1,20 +1,27 @@
 import os
-import subprocess
-
-working_directory = os.getcwd() + '/stanford-corenlp-4.2.0/'
-command = 'java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer'
-p = subprocess.Popen([command], cwd=working_directory,
-                     shell=True)  # Run the server
-
-
 import re
+import subprocess
+import pickle
+
+from xml.dom.minidom import parse
 from nltk.parse.corenlp import CoreNLPDependencyParser
+from nltk.parse.dependencygraph import DependencyGraph
 
-my_parser = CoreNLPDependencyParser(url="http://localhost:9000")
-
+my_parser = None
 specialchars = ('(', ')', '[', ']', '*', '+', '?')  # FIXME: hack
 
-def analyze(s): 
+
+def connect_to_parser(run_parser=True):
+    global my_parser
+    if run_parser:
+        working_directory = os.getcwd() + '/stanford-corenlp-4.2.0/'
+        command = 'java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer'
+        p = subprocess.Popen([command], cwd=working_directory,
+                             shell=True)  # Run the server
+    my_parser = CoreNLPDependencyParser(url="http://localhost:9000")
+
+
+def analyze(s):
     """
     Task: Given one sentence, sends it to CoreNLP to obtain the tokens, tags, and dependency tree. 
     It also adds the start/end offsets to each token.
@@ -35,13 +42,18 @@ def analyze(s):
      7: {’word’: ’resorcinol’, ’head’: 6, ’lemma’: ’resorcinol’, ’rel’: ’dobj’, ’tag’: ’NN, ...}
      ... }
     """
+    if my_parser is None:
+        connect_to_parser()
     if not s:
         return None
 
     input = re.sub('%', '%25', s)
 
     # parse text (as many times as needed)
-    mytree, = my_parser.raw_parse(input)
+    if my_parser is not None:
+        mytree, = my_parser.raw_parse(input)
+    else:
+        raise Exception("Could not connect to parser.")
 
     shift = 0
     for idx in range(len(mytree.nodes)):
@@ -50,8 +62,8 @@ def analyze(s):
 
         if word is None:
             continue
-        elif word.startswith(specialchars): 
-            word = "\\" + word # FIXME: hack
+        elif word.startswith(specialchars):
+            word = "\\" + word  # FIXME: hack
 
         ans = re.search(word, s[shift:])
         if ans is not None:
@@ -62,7 +74,60 @@ def analyze(s):
     return mytree
 
 
-def check_interaction(analysis, entities, e1, e2): 
+class Tree():
+    def __init__(self, analysis):
+        self.tree_string = analysis.to_conll(10)
+        self.starts = [analysis.nodes[i]['start'] if 'start' in analysis.nodes[i]
+                       else None for i in range(len(analysis.nodes))]
+        self.ends = [analysis.nodes[i]['end'] if 'end' in analysis.nodes[i]
+                     else None for i in range(len(analysis.nodes))]
+
+    def getDependencyGraph(self):
+        # Convert from string
+        dependencygraph = DependencyGraph(self.tree_string)
+        # Add start & end values
+        for i in range(len(dependencygraph.nodes)):
+            dependencygraph.nodes[i]['start'] = self.starts[i]
+            dependencygraph.nodes[i]['end'] = self.ends[i]
+
+        return dependencygraph
+
+
+def getInfo(datadir):
+    filename = datadir.split('/')
+    filename = filename[0] + '/dependency_trees_' + filename[1] + '.pkl'
+    try:
+        with open(filename, 'rb') as f:
+            data_dict = pickle.load(f)
+    except (FileNotFoundError, EOFError) as e:
+        data_dict = dict()
+        connect_to_parser()
+        # process each file in directory
+        for f in os.listdir(datadir):
+            if not f.endswith('.xml'):
+                continue
+            # parse XML file , obtaining a DOM tree
+            tree = parse(datadir + "/" + f)
+            # process each sentence in the file
+            sentences = tree.getElementsByTagName("sentence")
+            for s in sentences:
+                # we're only considering pairs
+                pairs = s.getElementsByTagName("pair")
+                # save data
+                if len(pairs) > 0:
+                    # get sentence id
+                    sid = s.attributes["id"].value
+                    # Tokenize, tag, and parse sentence
+                    analysis = analyze(s.attributes["text"].value)
+                    tree = Tree(analysis)
+                    # Save into dict
+                    data_dict[sid] = tree   #(tree.tree_string, tree.starts, tree.ends)
+    with open(filename, 'wb') as f:
+        pickle.dump(data_dict, f)
+    return data_dict
+
+
+def check_interaction(analysis, entities, e1, e2):
     """
     Task: Decide whether a sentence is expressing a DDI between two drugs.
 
@@ -72,12 +137,14 @@ def check_interaction(analysis, entities, e1, e2):
 
     Output: Returns the type of interaction(’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
     """
-    clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
-    clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases', 'decreased']
+    clues_effect = ['administer', 'potentiate', 'prevent', 'administers',
+                    'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
+    clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces',
+                       'increases', 'increased', 'decreases', 'decreased']
     clues_int = ['interact', 'interaction', 'interacts', 'interactions']
     clues_advise = ['should', 'recommended']
 
-    #ids for entities
+    # ids for entities
     id_e1 = int(e1[-1])
     id_e2 = int(e2[-1])
 
@@ -89,13 +156,11 @@ def check_interaction(analysis, entities, e1, e2):
         elif e == e2:
             e2_offset = entities[e]
 
-    #for i in reversed(range(id_e2)):
+    # for i in reversed(range(id_e2)):
     node_e1 = analysis.nodes[id_e1]
     node_e2 = analysis.nodes[id_e2]
     head_e1 = node_e1['head']
     head_e2 = node_e2['head']
-
-
 
     # TODO What type of interaction should be returned here
     if head_e2 == head_e1:
@@ -108,8 +173,8 @@ def check_interaction(analysis, entities, e1, e2):
     # TODO What type of interaction should be returned here
 
     # Check if e1 or e2 is over/under each other
-    #TODO iterate further heads
-    #TODO What type of interaction should be returned here
+    # TODO iterate further heads
+    # TODO What type of interaction should be returned here
     elif head_e1 == id_e2:
         #print("E2 IS OVER E1")
         pass
@@ -125,7 +190,7 @@ def check_interaction(analysis, entities, e1, e2):
             word = node['word']
             lemma = node['lemma']
 
-            #print(node)
+            # print(node)
 
             if word or lemma in clues_effect:
                 return 'effect'

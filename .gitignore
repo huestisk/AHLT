@@ -1,6 +1,7 @@
 # Additional
 stanford-corenlp-4.2.0/
-data/
+data/*
+!data/*.pkl
 papers/
 resources/
 .vscode/
@@ -9,6 +10,7 @@ exercises/
 *.out
 *.feat
 *.pkl
+!data/*.pkl
 *.model
 
 # Byte-compiled / optimized / DLL files
