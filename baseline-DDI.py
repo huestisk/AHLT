@@ -2,7 +2,6 @@ import os
 import sys
 from xml.dom.minidom import parse
 
-from eval.evaluator import evaluate
 from helper_functions_DDI import getInfo, check_interaction
 
 # parse arguments
@@ -28,6 +27,7 @@ for f in os.listdir(datadir):
         if len(pairs) > 0:
             # get sentence id
             sid = s.attributes["id"].value
+            stext = s.attributes["text"].value
             # get dependency tree
             analysis = info[sid].getDependencyGraph()
             # load sentence entities into a dictionary
@@ -40,9 +40,8 @@ for f in os.listdir(datadir):
             for p in pairs:
                 id_e1 = p.attributes["e1"].value
                 id_e2 = p.attributes["e2"].value
-                ddi_type = check_interaction(analysis, entities, id_e1, id_e2)
+                ddi_type = check_interaction(analysis, entities, id_e1, id_e2, stext)
                 if ddi_type is not None:
                     with open(outfile, 'a') as f:
                         print(sid + "|" + id_e1 + "|" + id_e2 + "|" + ddi_type, file=f)
-# get performance score
-evaluate("DDI", datadir, outfile)
+

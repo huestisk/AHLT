@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import pickle
+import numpy as np
 
 from xml.dom.minidom import parse
 from nltk.parse.corenlp import CoreNLPDependencyParser
@@ -121,13 +122,14 @@ def getInfo(datadir):
                     analysis = analyze(s.attributes["text"].value)
                     tree = Tree(analysis)
                     # Save into dict
-                    data_dict[sid] = tree   #(tree.tree_string, tree.starts, tree.ends)
+                    # (tree.tree_string, tree.starts, tree.ends)
+                    data_dict[sid] = tree
     with open(filename, 'wb') as f:
         pickle.dump(data_dict, f)
     return data_dict
 
 
-def check_interaction(analysis, entities, e1, e2):
+def check_interaction(analysis, entities, e1, e2, stext=''):
     """
     Task: Decide whether a sentence is expressing a DDI between two drugs.
 
@@ -145,18 +147,25 @@ def check_interaction(analysis, entities, e1, e2):
     clues_advise = ['should', 'recommended']
 
     # ids for entities
-    id_e1 = int(e1[-1])
-    id_e2 = int(e2[-1])
+    ids = dict()
+    for idx in analysis.nodes:
+        node = analysis.nodes[(idx)]
+        n_offset = np.array((node['start'], node['end']))
+        for e in entities:
+            # Trick to remove case: ['94', '97;102', '121]
+            e_offset = entities[e] if len(
+                entities[e]) == 2 else entities[e][::2]
+            if any([';' in val for val in e_offset]):
+                continue         # FIXME
+            e_offset = np.array(e_offset).astype(int)
+            if all(n_offset == e_offset):
+                ids[e] = node['address']
+            elif any(n_offset == e_offset):
+                pass
 
-    # Get offsets for entities (not used yet)
-    # Are these of use here?
-    for e in entities:
-        if e == e1:
-            e1_offset = entities[e]
-        elif e == e2:
-            e2_offset = entities[e]
-
-    # for i in reversed(range(id_e2)):
+    # FIXME: Node should always be found
+    id_e1 = ids[e1] if e1 in ids.keys() else 0
+    id_e2 = ids[e2] if e2 in ids.keys() else 1
     node_e1 = analysis.nodes[id_e1]
     node_e2 = analysis.nodes[id_e2]
     head_e1 = node_e1['head']
