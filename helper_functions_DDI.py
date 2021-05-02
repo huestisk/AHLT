@@ -188,6 +188,24 @@ def find_best_node_match(arr, list_arrays):
 
     return np.argmax(overlap)
 
+clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
+clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases', 'decreased']
+clues_int = ['interact', 'interaction', 'interacts', 'interactions']
+clues_advise = ['should', 'recommended']
+
+def check_clues(node):
+    word = node['word']
+    lemma = node['lemma']
+    if (word in clues_effect) or (lemma in clues_effect):
+        return 'effect'
+    elif (word in clues_mechanism) or (lemma in clues_mechanism):
+        return 'mechanism'
+    elif (word in clues_int) or (lemma in clues_int):
+        return 'int'
+    elif (word in clues_advise) or (lemma in clues_advise):
+        return 'advise'
+    else:
+        return None
 
 def check_interaction(analysis, entities, e1, e2, stext=None):
     """
@@ -199,12 +217,6 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
 
     Output: Returns the type of interaction (’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
     """
-    clues_effect = ['administer', 'potentiate', 'prevent', 'administers',
-                    'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
-    clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces',
-                       'increases', 'increased', 'decreases', 'decreased']
-    clues_int = ['interact', 'interaction', 'interacts', 'interactions']
-    clues_advise = ['should', 'recommended']
 
     # DEBUG
     if stext is not None:
@@ -217,7 +229,7 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
     n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(
         str) for idx in nodes if idx is not None]
 
-    ## Get node IDs for entities
+    # Get node IDs for entities
     ids = dict()
     for e in [e1, e2]:
         e_offset = np.array(entities[e])
@@ -226,16 +238,17 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
         if n_key != 0:
             ids[e] = nodes[n_key]['address']
         else:
-            return None     # FIXME: match not found because dependency tree is faulty...
-            # raise Exception("Match not found.")
+            # FIXME: match not found because dependency tree is faulty...
+            # Faulty documents: d15.s0, d68.s0, d4.s0, d134.s0
+            return None     # raise Exception("Match not found.")
 
     id_e1 = ids[e1]
     id_e2 = ids[e2]
 
-    ## Build subtree
+    # Build subtree
     iterations = 0
     subtree = [[id_e1], [id_e2]]
-    while subtree[0][-1] != subtree[1][-1] and iterations < len(nodes):
+    while iterations < len(nodes):
         # Update branch 1
         node_e1 = nodes[subtree[0][-1]]['head']
         if node_e1 != 0:
@@ -245,57 +258,24 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
         if node_e2 != 0:
             subtree[1].append(node_e2)
         iterations += 1
-        if iterations == len(nodes):
-            print(0)
+        # Check if tree complete
+        if subtree[0][-1] == subtree[1][-1]:
+            break
+        elif subtree[0][-1] in subtree[1]:  # Prune
+            idx = subtree[1].index(subtree[0][-1])
+            subtree[1] = subtree[1][:idx+1]
+        elif subtree[1][-1] in subtree[0]:  # Prune
+            idx = subtree[0].index(subtree[1][-1])
+            subtree[0] = subtree[0][:idx+1]
 
-    node_e1 = nodes[id_e1]
-    node_e2 = nodes[id_e2]
-    head_e1 = node_e1['head']
-    head_e2 = node_e2['head']
+    # Make prediction
+    branch_length = [len(branch) for branch in subtree]
+    with open('branches.txt', 'a') as f:
+        print(branch_length, file=f)
+    if max(branch_length) > 6 or min(branch_length) > 5:
+        return None
 
-    if head_e2 == head_e1:      # FIXME: improve
-        #print("UNDER THE SAME WORD")
-        head = nodes[head_e1]
-        word = head['word']
-        lemma = head['lemma']
-        if (word in clues_effect) or (lemma in clues_effect):
-            return 'effect'
-        elif (word in clues_mechanism) or (lemma in clues_mechanism):
-            return 'mechanism'
-        elif (word in clues_int) or (lemma in clues_int):
-            return 'int'
-        elif (word in clues_advise) or (lemma in clues_advise):
-            return 'advise'
-        # # TODO: check based on type
-        # if head['ctag'] == 'VB' or head['ctag'] == 'VBN':
-        #     #print("UNDER THE SAME VERB")
-        #     return 'int'
-    # TODO: Check if e1 or e2 is over/under each other
-    elif head_e1 == id_e2:
-        #print("E2 IS OVER E1")
-        pass
-    elif head_e2 == id_e1:
-        #print("E1 IS OVER E2")
-        pass
-    else:   # TODO: Find common head, even if it's further up
-        lowest_common_subsummer = nodes[subtree[0][-1]]
-        word = lowest_common_subsummer['word']
-        lemma = lowest_common_subsummer['lemma']
-        if (word in clues_effect) or (lemma in clues_effect):
-            return 'effect'
-        elif (word in clues_mechanism) or (lemma in clues_mechanism):
-            return 'mechanism'
-        elif (word in clues_int) or (lemma in clues_int):
-            return 'int'
-        elif (word in clues_advise) or (lemma in clues_advise):
-            return 'advise'
+    lowest_common_subsummer = nodes[subtree[0][-1]]
+    result = check_clues(lowest_common_subsummer)
 
-    # TODO: check if entities are between the pair
-
-    # next_node_e1 = nodes[id_e1 + 1]
-    # next_node_e2 = nodes[id_e2 + 1]
-
-    # if next_node_e1['word'] or next_node_e2['word'] in clues_advise:
-    #     return 'advise'
-
-    return None
+    return result
