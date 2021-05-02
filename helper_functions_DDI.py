@@ -207,32 +207,53 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
     clues_advise = ['should', 'recommended']
 
     # DEBUG
-    # if stext is not None:
-    #     e1_word = stext[int(entities[e1][0]):int(entities[e1][-1])+1]
-    #     e2_word = stext[int(entities[e2][0]):int(entities[e2][-1])+1]
+    if stext is not None:
+        e1_word = stext[int(entities[e1][0]):int(entities[e1][-1])+1]
+        e2_word = stext[int(entities[e2][0]):int(entities[e2][-1])+1]
+        # words = [analysis.nodes[node]['word'] for node in analysis.nodes]
 
     # Extract Node offsets
     nodes = analysis.nodes
     n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(
         str) for idx in nodes if idx is not None]
 
-    # Get node IDs for entities
+    ## Get node IDs for entities
     ids = dict()
-    for e in entities:
+    for e in [e1, e2]:
         e_offset = np.array(entities[e])
         n_idx = find_best_node_match(e_offset, n_offsets)
         n_key = list(nodes.keys())[n_idx]
-        ids[e] = nodes[n_key]['address']
+        if n_key != 0:
+            ids[e] = nodes[n_key]['address']
+        else:
+            return None     # FIXME: match not found because dependency tree is faulty...
+            # raise Exception("Match not found.")
 
     id_e1 = ids[e1]
     id_e2 = ids[e2]
+
+    ## Build subtree
+    iterations = 0
+    subtree = [[id_e1], [id_e2]]
+    while subtree[0][-1] != subtree[1][-1] and iterations < len(nodes):
+        # Update branch 1
+        node_e1 = nodes[subtree[0][-1]]['head']
+        if node_e1 != 0:
+            subtree[0].append(node_e1)
+        # Update branch 2
+        node_e2 = nodes[subtree[1][-1]]['head']
+        if node_e2 != 0:
+            subtree[1].append(node_e2)
+        iterations += 1
+        if iterations == len(nodes):
+            print(0)
+
     node_e1 = nodes[id_e1]
     node_e2 = nodes[id_e2]
     head_e1 = node_e1['head']
     head_e2 = node_e2['head']
 
-    # TODO: Find common head, even if it's further up
-    if head_e2 == head_e1:
+    if head_e2 == head_e1:      # FIXME: improve
         #print("UNDER THE SAME WORD")
         head = nodes[head_e1]
         word = head['word']
@@ -256,6 +277,18 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
     elif head_e2 == id_e1:
         #print("E1 IS OVER E2")
         pass
+    else:   # TODO: Find common head, even if it's further up
+        lowest_common_subsummer = nodes[subtree[0][-1]]
+        word = lowest_common_subsummer['word']
+        lemma = lowest_common_subsummer['lemma']
+        if (word in clues_effect) or (lemma in clues_effect):
+            return 'effect'
+        elif (word in clues_mechanism) or (lemma in clues_mechanism):
+            return 'mechanism'
+        elif (word in clues_int) or (lemma in clues_int):
+            return 'int'
+        elif (word in clues_advise) or (lemma in clues_advise):
+            return 'advise'
 
     # TODO: check if entities are between the pair
 
