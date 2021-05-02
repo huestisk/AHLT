@@ -1,8 +1,5 @@
-import os
 import sys
 import subprocess
-
-cwd = os.getcwd()
 
 # parse arguments
 datadir = sys.argv[1]

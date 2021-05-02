@@ -129,7 +129,67 @@ def getInfo(datadir):
     return data_dict
 
 
-def check_interaction(analysis, entities, e1, e2, stext=''):
+def arr_in_list(arr, list_arrays):
+    return next((idx for idx, elem in enumerate(list_arrays) if np.array_equal(elem, arr)), None)
+
+
+def get_overlap(arr, list_arrays):
+    arr_len = int(arr[1]) - int(arr[0])
+    overlap = np.zeros((len(list_arrays),))
+    # Get overlap for each element
+    for i, elem in enumerate(list_arrays):
+        if 'None' in elem:
+            continue
+        elem_len = int(elem[1]) - int(elem[0])
+        elem_start_to_arr_start = int(elem[0]) - int(arr[0])
+        elem_end_to_arr_start = int(elem[1]) - int(arr[0])
+        elem_start_to_arr_end = int(elem[0]) - int(arr[1])
+        elem_end_to_arr_end = int(elem[1]) - int(arr[1])
+        # Case: elem ends before arr starts
+        if elem_end_to_arr_start < 0:
+            continue
+        # Case: elem starts after arr ends
+        elif elem_start_to_arr_end > 0:
+            continue
+        # Case: complete overlap (elem smaller than arr)
+        elif elem_start_to_arr_start >= 0 and elem_end_to_arr_end <= 0:
+            overlap[i] = min(arr_len, elem_len)
+        # Case: complete overlap (elem larger than arr)
+        elif elem_start_to_arr_start <= 0 and elem_end_to_arr_end >= 0:
+            overlap[i] = min(arr_len, elem_len)
+        # Case: end of elem overlaps
+        elif elem_start_to_arr_start <= 0:
+            overlap[i] = elem_end_to_arr_start
+        # Case: start of elem overlaps
+        elif elem_start_to_arr_end <= 0:
+            overlap[i] = - elem_start_to_arr_end
+        else:
+            raise Exception("Overlap not found.")
+
+    return overlap
+
+
+def find_best_node_match(arr, list_arrays):
+    # Check for perfect match
+    idx = arr_in_list(arr, list_arrays)
+    if idx is not None:
+        return idx
+    # Find node with most overlap
+    try:
+        overlap = get_overlap(arr, list_arrays)
+    # Case: ['166', '176;185', '186;188', '195'] --> [['166', '176'],['185', '186'],['188', '195]]
+    except ValueError:
+        arrs = np.array(';'.join(arr).split(';'))
+        arrs = arrs.reshape((2, int(len(arrs)/2)))
+        # Get overlaps of each offsets
+        overlap = np.zeros((len(list_arrays),))
+        for arr in arrs:
+            overlap += get_overlap(arr, list_arrays)
+
+    return np.argmax(overlap)
+
+
+def check_interaction(analysis, entities, e1, e2, stext=None):
     """
     Task: Decide whether a sentence is expressing a DDI between two drugs.
 
@@ -137,7 +197,7 @@ def check_interaction(analysis, entities, e1, e2, stext=''):
             entites: A list of all entities in the sentence(id and offsets)
             e1, e2: ids of the two entities to be checked.
 
-    Output: Returns the type of interaction(’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
+    Output: Returns the type of interaction (’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
     """
     clues_effect = ['administer', 'potentiate', 'prevent', 'administers',
                     'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
@@ -146,44 +206,50 @@ def check_interaction(analysis, entities, e1, e2, stext=''):
     clues_int = ['interact', 'interaction', 'interacts', 'interactions']
     clues_advise = ['should', 'recommended']
 
-    # ids for entities
-    ids = dict()
-    for idx in analysis.nodes:
-        node = analysis.nodes[(idx)]
-        n_offset = np.array((node['start'], node['end']))
-        for e in entities:
-            # Trick to remove case: ['94', '97;102', '121]
-            e_offset = entities[e] if len(
-                entities[e]) == 2 else entities[e][::2]
-            if any([';' in val for val in e_offset]):
-                continue         # FIXME
-            e_offset = np.array(e_offset).astype(int)
-            if all(n_offset == e_offset):
-                ids[e] = node['address']
-            elif any(n_offset == e_offset):
-                pass
+    # DEBUG
+    # if stext is not None:
+    #     e1_word = stext[int(entities[e1][0]):int(entities[e1][-1])+1]
+    #     e2_word = stext[int(entities[e2][0]):int(entities[e2][-1])+1]
 
-    # FIXME: Node should always be found
-    id_e1 = ids[e1] if e1 in ids.keys() else 0
-    id_e2 = ids[e2] if e2 in ids.keys() else 1
-    node_e1 = analysis.nodes[id_e1]
-    node_e2 = analysis.nodes[id_e2]
+    # Extract Node offsets
+    nodes = analysis.nodes
+    n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(
+        str) for idx in nodes if idx is not None]
+
+    # Get node IDs for entities
+    ids = dict()
+    for e in entities:
+        e_offset = np.array(entities[e])
+        n_idx = find_best_node_match(e_offset, n_offsets)
+        n_key = list(nodes.keys())[n_idx]
+        ids[e] = nodes[n_key]['address']
+
+    id_e1 = ids[e1]
+    id_e2 = ids[e2]
+    node_e1 = nodes[id_e1]
+    node_e2 = nodes[id_e2]
     head_e1 = node_e1['head']
     head_e2 = node_e2['head']
 
-    # TODO What type of interaction should be returned here
+    # TODO: Find common head, even if it's further up
     if head_e2 == head_e1:
         #print("UNDER THE SAME WORD")
-        node = analysis.nodes[id_e2]
-        if node['ctag'] == 'VB':
-            #print("UNDER THE SAME VERB")
+        head = nodes[head_e1]
+        word = head['word']
+        lemma = head['lemma']
+        if (word in clues_effect) or (lemma in clues_effect):
+            return 'effect'
+        elif (word in clues_mechanism) or (lemma in clues_mechanism):
+            return 'mechanism'
+        elif (word in clues_int) or (lemma in clues_int):
             return 'int'
-
-    # TODO What type of interaction should be returned here
-
-    # Check if e1 or e2 is over/under each other
-    # TODO iterate further heads
-    # TODO What type of interaction should be returned here
+        elif (word in clues_advise) or (lemma in clues_advise):
+            return 'advise'
+        # # TODO: check based on type
+        # if head['ctag'] == 'VB' or head['ctag'] == 'VBN':
+        #     #print("UNDER THE SAME VERB")
+        #     return 'int'
+    # TODO: Check if e1 or e2 is over/under each other
     elif head_e1 == id_e2:
         #print("E2 IS OVER E1")
         pass
@@ -191,29 +257,12 @@ def check_interaction(analysis, entities, e1, e2, stext=''):
         #print("E1 IS OVER E2")
         pass
 
-    if len(entities) > 2:
+    # TODO: check if entities are between the pair
 
-        # check words between e1 and e2, naive but a first step for comparison
-        for idx in range(id_e1+1, id_e2):
-            node = analysis.nodes[idx]
-            word = node['word']
-            lemma = node['lemma']
+    # next_node_e1 = nodes[id_e1 + 1]
+    # next_node_e2 = nodes[id_e2 + 1]
 
-            # print(node)
-
-            if word or lemma in clues_effect:
-                return 'effect'
-            elif word or lemma in clues_mechanism:
-                return 'mechanism'
-            elif word or lemma in clues_int:
-                return 'int'
-            elif word or lemma in clues_advise:
-                return 'advise'
-
-    next_node_e1 = analysis.nodes[id_e1 + 1]
-    next_node_e2 = analysis.nodes[id_e2 + 1]
-
-    if next_node_e1['word'] or next_node_e2['word'] in clues_advise:
-        return 'advise'
+    # if next_node_e1['word'] or next_node_e2['word'] in clues_advise:
+    #     return 'advise'
 
     return None
