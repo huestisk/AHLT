@@ -264,14 +264,16 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
         elif subtree[0][-1] in subtree[1]:  # Prune
             idx = subtree[1].index(subtree[0][-1])
             subtree[1] = subtree[1][:idx+1]
+            break
         elif subtree[1][-1] in subtree[0]:  # Prune
             idx = subtree[0].index(subtree[1][-1])
             subtree[0] = subtree[0][:idx+1]
+            break
 
     # Make prediction
     branch_length = [len(branch) for branch in subtree]
-    with open('branches.txt', 'a') as f:
-        print(branch_length, file=f)
+    # with open('branches.txt', 'a') as f:
+    #     print(branch_length, file=f)
     if max(branch_length) > 6 or min(branch_length) > 5:
         return None
 
