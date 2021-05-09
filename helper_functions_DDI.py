@@ -188,10 +188,13 @@ def find_best_node_match(arr, list_arrays):
 
     return np.argmax(overlap)
 
-clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect', 'effects', 'reaction', 'reactions']
-clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases', 'decreased']
+clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect',
+                'effects', 'reaction', 'reactions', 'inhibited', 'caused']
+clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases',
+                   'decreased', 'reduced', 'elevated', 'exert', 'diminish', 'lessen', 'elevate', 'augment', 'enhance',
+                   'extend', 'rise', 'raise']
 clues_int = ['interact', 'interaction', 'interacts', 'interactions']
-clues_advise = ['should', 'recommended']
+clues_advise = ['should', 'recommended', 'contraindicated', 'administration', 'caution']
 
 def check_clues(node):
     word = node['word']
@@ -217,6 +220,8 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
 
     Output: Returns the type of interaction (’effect’,’mechanism’,’advice’,’int’) between e1 and e2 expressed by the sentence, or ’None’ if no interaction is described.
     """
+
+    result = None
 
     # DEBUG
     if stext is not None:
@@ -270,14 +275,42 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
             subtree[0] = subtree[0][:idx+1]
             break
 
+    #extract separate lists
+    list1, list2 = map(list,zip(subtree))
+    #flatten
+    list1 = [item for elem in list1 for item in elem]
+    list2 = [item for elem in list2 for item in elem]
+
+    # rule 1 - check if there is a common verb for the nodes
+    for node in list1:
+        if node in list2:
+            if analysis.nodes[node]['tag'] in 'VBN':
+                print("found verb:", analysis.nodes[node]['word'])
+                result = check_clues(analysis.nodes[node])
+                if result is not None:
+                    break
+    verb = "hey"
+    if result is None:
+        #print("found no common word, look between")
+
+        # rule 2 - check if there is a verb between nodes
+        for between in range(ids[e1]+1, ids[e2]):
+            if analysis.nodes[between]['tag']=='VBN' and result is None:
+                verb = analysis.nodes[node]['word']
+                #print("found verb between words:", analysis.nodes[node]['word'])
+                result = check_clues(analysis.nodes[node])
+
+    if result is None and verb is not "hey":
+        print("Not classified, but verb:", verb)
+
     # Make prediction
     branch_length = [len(branch) for branch in subtree]
     # with open('branches.txt', 'a') as f:
     #     print(branch_length, file=f)
-    if max(branch_length) > 6 or min(branch_length) > 5:
-        return None
+    #if max(branch_length) > 6 or min(branch_length) > 5:
+    #    return None
 
-    lowest_common_subsummer = nodes[subtree[0][-1]]
-    result = check_clues(lowest_common_subsummer)
+    #lowest_common_subsummer = nodes[subtree[0][-1]]
+    #result = check_clues(lowest_common_subsummer)
 
     return result
