@@ -17,8 +17,8 @@ def connect_to_parser(run_parser=True):
     if run_parser:
         working_directory = os.getcwd() + '/stanford-corenlp-4.2.0/'
         command = 'java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer'
-        p = subprocess.Popen([command], cwd=working_directory,
-                             shell=True)  # Run the server
+        subprocess.Popen([command], cwd=working_directory,
+                         shell=True)  # Run the server
     my_parser = CoreNLPDependencyParser(url="http://localhost:9000")
 
 
@@ -94,13 +94,20 @@ class Tree():
         return dependencygraph
 
 
+def yes_or_no(question):
+    reply = str(input(question + ' (y/N): ')).lower().strip()
+    return True if reply[0] == 'y' else False
+
+
 def getInfo(datadir):
     filename = datadir.split('/')
     filename = filename[0] + '/dependency_trees_' + filename[1] + '.pkl'
     try:
         with open(filename, 'rb') as f:
             data_dict = pickle.load(f)
-    except (FileNotFoundError, EOFError) as e:
+    except (FileNotFoundError, EOFError):
+        if not yes_or_no("Could not find data. Reparse?"):
+            raise Exception
         data_dict = dict()
         connect_to_parser()
         # process each file in directory
@@ -285,14 +292,12 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
     for node in list1:
         if node in list2:
             if analysis.nodes[node]['tag'] in 'VBN':
-                print("found verb:", analysis.nodes[node]['word'])
+                #print("found verb:", analysis.nodes[node]['word'])
                 result = check_clues(analysis.nodes[node])
                 if result is not None:
                     break
-    verb = "hey"
-    if result is None:
-        #print("found no common word, look between")
 
+    if result is None:
         # rule 2 - check if there is a verb between nodes
         for between in range(ids[e1]+1, ids[e2]):
             if analysis.nodes[between]['tag']=='VBN' and result is None:
@@ -300,17 +305,143 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
                 #print("found verb between words:", analysis.nodes[node]['word'])
                 result = check_clues(analysis.nodes[node])
 
-    if result is None and verb is not "hey":
-        print("Not classified, but verb:", verb)
 
     # Make prediction
     branch_length = [len(branch) for branch in subtree]
     # with open('branches.txt', 'a') as f:
     #     print(branch_length, file=f)
-    #if max(branch_length) > 6 or min(branch_length) > 5:
-    #    return None
+    if max(branch_length) > 6 or min(branch_length) > 5:
+        return None
 
     #lowest_common_subsummer = nodes[subtree[0][-1]]
     #result = check_clues(lowest_common_subsummer)
 
     return result
+
+
+""" ML Functions """
+def computeFeatures(analysis, entities, e1, e2, stext):
+
+    # DEBUG
+    if stext is not None:
+        e1_word = stext[int(entities[e1][0]):int(entities[e1][-1])+1]
+        e2_word = stext[int(entities[e2][0]):int(entities[e2][-1])+1]
+        # words = [analysis.nodes[node]['word'] for node in analysis.nodes]
+
+    # Extract Node offsets
+    nodes = analysis.nodes
+    n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(
+        str) for idx in nodes if idx is not None]
+
+    # Get node IDs for entities
+    ids = dict()
+    for e in [e1, e2]:
+        e_offset = np.array(entities[e])
+        n_idx = find_best_node_match(e_offset, n_offsets)
+        n_key = list(nodes.keys())[n_idx]
+        if n_key != 0:
+            ids[e] = nodes[n_key]['address']
+        else:
+            # FIXME: match not found because dependency tree is faulty...
+            # Faulty documents: d15.s0, d68.s0, d4.s0, d134.s0
+            return None     # raise Exception("Match not found.")
+
+    id_e1 = ids[e1]
+    id_e2 = ids[e2]
+
+    # Build subtree
+    iterations = 0
+    subtree = [[id_e1], [id_e2]]
+    while iterations < len(nodes):
+        # Update branch 1
+        node_e1 = nodes[subtree[0][-1]]['head']
+        if node_e1 != 0:
+            subtree[0].append(node_e1)
+        # Update branch 2
+        node_e2 = nodes[subtree[1][-1]]['head']
+        if node_e2 != 0:
+            subtree[1].append(node_e2)
+        iterations += 1
+        # Check if tree complete
+        if subtree[0][-1] == subtree[1][-1]:
+            break
+        elif subtree[0][-1] in subtree[1]:  # Prune
+            idx = subtree[1].index(subtree[0][-1])
+            subtree[1] = subtree[1][:idx+1]
+            break
+        elif subtree[1][-1] in subtree[0]:  # Prune
+            idx = subtree[0].index(subtree[1][-1])
+            subtree[0] = subtree[0][:idx+1]
+            break
+
+    # Interesting varibales
+    branch_length = [len(branch) for branch in subtree]
+    least_common_subsummer = nodes[subtree[0][-1]]
+
+    # Create features
+    e1_tag = f"e1_tag={nodes[id_e1]['tag']}"
+    e2_tag = f"e2_tag={nodes[id_e2]['tag']}"
+    lcs_word = f"lcs={least_common_subsummer}"
+    lcs_tag = f"lcs_tag={least_common_subsummer['tag']}"
+    max_branch_len = f"max_br_len={max(branch_length)}"
+    min_branch_len = f"min_br_len={min(branch_length)}"
+
+    return e1_tag, e2_tag, lcs_word, lcs_tag, max_branch_len, min_branch_len
+
+
+def getFeatures(outfile, datadir, recompute=False):
+    # delete old file
+    if recompute and os.path.exists(outfile):
+        os.remove(outfile)
+    # load features
+    try:
+        features = pickle.load(open(outfile, 'rb'))
+        return features
+    except FileNotFoundError:
+        if not yes_or_no("Could not load features. Recompute?"):
+            raise Exception
+    # Recompute the features
+    features = []
+    # Load dependency trees
+    info = getInfo(datadir)
+    # process each file in directory
+    for f in os.listdir(datadir):
+        # parse XML file , obtaining a DOM tree
+        tree = parse(datadir + "/" + f)
+        # process each sentence in the file
+        sentences = tree.getElementsByTagName("sentence")
+        for s in sentences:
+            # we're only considering pairs
+            pairs = s.getElementsByTagName("pair")
+            if len(pairs) <= 0:
+                continue
+            # get sentence id
+            sid = s.attributes["id"].value
+            stext = s.attributes["text"].value
+            # get dependency tree
+            analysis = info[sid].getDependencyGraph()
+            # load sentence entities into a dictionary
+            entities = {}
+            for e in s.getElementsByTagName("entity"):
+                entities[e.attributes["id"].value] = e.attributes["charOffset"].value.split(
+                    "-")
+            # get DDI
+            for p in pairs:
+                id_e1 = p.attributes["e1"].value
+                id_e2 = p.attributes["e2"].value
+                gold = None
+                if p.hasAttribute("type"):
+                    gold = p.attributes["type"].value
+                # Compute features
+                data = np.array((sid, id_e1, id_e2, gold), dtype=str)
+                feats = computeFeatures(analysis, entities, id_e1, id_e2, stext)
+                if feats is None:
+                    continue    #FIXME
+                data = np.concatenate((data, feats))
+                features.append(data)
+
+    # Write to file
+    features = np.array(features, dtype=object)
+    pickle.dump(features, open(outfile, 'wb'))
+
+    return features

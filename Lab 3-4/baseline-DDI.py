@@ -2,6 +2,7 @@ import os
 import sys
 from xml.dom.minidom import parse
 
+sys.path.append('common/')
 from helper_functions_DDI import getInfo, check_interaction
 
 # parse arguments

@@ -6,8 +6,8 @@ from sklearn.svm import SVC, LinearSVC
 from sklearn.preprocessing import OneHotEncoder
 
 # Load data
-datafile = sys.argv[1]
-outfile = sys.argv[2]
+datafile = sys.argv[2]
+outfile = sys.argv[3]
 
 with open(datafile, 'r') as f:
     data = f.readlines()

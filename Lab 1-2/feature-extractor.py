@@ -2,7 +2,8 @@ import sys
 import os
 from xml.dom.minidom import parse
 
-from helper_functions import tokenize, extract_features, get_tag
+sys.path.append(sys.path[0] + '/../common/')
+from helper_functions_NER import tokenize, extract_features, get_tag
 
 # parse arguments
 datadir = sys.argv[1]
