@@ -35,7 +35,7 @@ features = features[:, 4:]
 
 feat_encoder = OneHotEncoder(handle_unknown='ignore')
 X = feat_encoder.fit_transform(features)
-pickle.dump(feat_encoder, open('svm_encoder.pkl','wb'))
+pickle.dump(feat_encoder, open('encoder.pkl','wb'))
 
 # Create & train model
 svm = LinearSVC(dual=False, class_weight='balanced', max_iter=5000)

@@ -1,28 +1,32 @@
-# Load data
-with open(datafile, 'r') as f:
-    data = f.readlines()
+import numpy as np
+import pickle
 
-# Preprocessing
-data = np.array([np.array(line[:-1].split('\t'))
-                 for line in data if line != '\n'])
-classes = data[:, 4]
-features = data[:, 5:]
+# arguments
+outfile = 'devel.out'
+featfile = 'devel.feat'
+svmfile = 'train.model'
+encoder = 'encoder.pkl'
+
+# Load data
+with open(featfile, 'rb') as f:
+    data = pickle.load(f)
+
+classes = data[:, 3]
+features = data[:, 4:]
 
 # Load model & encoder
-svm = pickle.load(open('svm.model', 'rb'))
-feat_encoder = pickle.load(open('encoder.pkl', 'rb'))
+svm = pickle.load(open(svmfile, 'rb'))
+feat_encoder = pickle.load(open(encoder, 'rb'))
 X = feat_encoder.transform(features)
 
-# # Eval
-# test_acc = svm.score(X, classes)
-# print("Test Accurracy: {}".format(test_acc))
-
-# Print to file
+# Classify
 ddi = svm.predict(X)
 
-# TODO: Convert output to file
-
-# for line in lines:
-#     with open(outfile, 'a') as f:
-#         print(line, file=f)
+# Print to file
+for idx in range(len(ddi)):
+    sid = data[idx, 0]
+    e1 = data[idx, 1]
+    e2 = data[idx, 2]
+    with open(outfile, 'a') as f:
+        print(f"{sid}|{e1}|{e2}|{ddi[idx]}", file=f)
 
