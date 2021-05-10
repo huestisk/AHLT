@@ -11,10 +11,21 @@ from helper_functions_DDI import getFeatures
 # parse arguments
 datadir = sys.argv[1]
 featfile = sys.argv[2]
-svmfile = sys.argv[3]
+# svmfile = sys.argv[3]
 
 """ Get Features """
-features = getFeatures(featfile, datadir)
+features = getFeatures(featfile, datadir, recompute=True)
+
+# cheat = features[features[:,3]!='None']
+# cheat = np.array([cheat[:,3], cheat[:,6]]).T  
+# gold = cheat[:,0]
+# lemma = [word[10:] for word in cheat[:,1]]
+
+# from itertools import compress
+# int_lemma = list(compress(lemma, gold=='int'))
+# mech_lemma = list(compress(lemma, gold=='mechanism'))
+# eff_lemma = list(compress(lemma, gold=='effect'))
+# ad_lemma = list(compress(lemma, gold=='advise'))
 
 
 """ Train Network """

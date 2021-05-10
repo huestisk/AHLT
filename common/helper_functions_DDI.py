@@ -196,26 +196,24 @@ def find_best_node_match(arr, list_arrays):
     return np.argmax(overlap)
 
 
-clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect',
-                'effects', 'reaction', 'reactions', 'inhibited', 'caused']
-clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases',
-                   'decreased', 'reduced', 'elevated', 'exert', 'diminish', 'lessen', 'elevate', 'augment', 'enhance',
-                   'extend', 'rise', 'raise']
-clues_int = ['interact', 'interaction', 'interacts', 'interactions']
-clues_advise = ['should', 'recommended',
-                'contraindicated', 'administration', 'caution']
+clues_effect    = ['effect', 'potentiate', 'enhance', 'report', 'inhibitor', 'include',
+                   'inhibit', 'cause', 'augment', 'diminish', 'affect']
+clues_mechanism = ['increase', 'reduce', 'produce', 'show', 'reduction', 'lower', 
+                   'decrease', 'inhibit', 'interfere', 'have', 'alter', 'impair']
+clues_int       = ['interact', 'interaction', 'include']
+clues_advise    = ['exceed', 'co-administration', 'use', 'co-administer', 
+                   'administer', 'avoid', 'consider', 'administraion']
 
 
 def check_clues(node):
-    word = node['word']
     lemma = node['lemma']
-    if (word in clues_effect) or (lemma in clues_effect):
+    if lemma in clues_effect:
         return 'effect'
-    elif (word in clues_mechanism) or (lemma in clues_mechanism):
+    elif lemma in clues_mechanism:
         return 'mechanism'
-    elif (word in clues_int) or (lemma in clues_int):
+    elif lemma in clues_int:
         return 'int'
-    elif (word in clues_advise) or (lemma in clues_advise):
+    elif lemma in clues_advise:
         return 'advise'
     else:
         return None
@@ -288,8 +286,7 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
     # rule 1 - check whether one entity is inside the subject of one
     # verb, and the other is inside the direct object of the same verb
     lowest_common_subsummer = nodes[subtree[0][-1]]
-    # if lowest_common_subsummer['ctag'] == 'VB' and 
-    if min(branch_length) != 1:
+    if lowest_common_subsummer['ctag'].startswith('VB') and min(branch_length) != 1:
         rel1 = analysis.nodes[subtree[0][-2]]['rel']
         rel2 = analysis.nodes[subtree[1][-2]]['rel']
         if (rel1 == 'nsubj' and rel2 == 'obj') or (rel2 == 'nsubj' and rel1 == 'obj'):
@@ -301,7 +298,7 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
     # rule 2 - check if there is a verb between nodes
     for between in range(id_e1+1, id_e2):
         node = analysis.nodes[between]
-        if node['ctag'] == 'VB':
+        if node['ctag'].startswith('VB'):
             result = check_clues(node)
 
     return result
@@ -360,16 +357,18 @@ def computeFeatures(analysis, entities, e1, e2, stext):
     # Interesting varibales
     branch_length = [len(branch) for branch in subtree]
     least_common_subsummer = nodes[subtree[0][-1]]
+    lcs_in_list = check_clues(least_common_subsummer)
 
     # Create features
     e1_tag = f"e1_tag={nodes[id_e1]['tag']}"
     e2_tag = f"e2_tag={nodes[id_e2]['tag']}"
-    lcs_word = f"lcs={least_common_subsummer}"
+    lcs_lemma = f"lcs_lemma={least_common_subsummer['lemma']}"
     lcs_tag = f"lcs_tag={least_common_subsummer['tag']}"
     max_branch_len = f"max_br_len={max(branch_length)}"
     min_branch_len = f"min_br_len={min(branch_length)}"
+    lcs_in_list = f"list={lcs_in_list}"
 
-    return e1_tag, e2_tag, lcs_word, lcs_tag, max_branch_len, min_branch_len
+    return e1_tag, e2_tag, lcs_lemma, lcs_tag, max_branch_len, min_branch_len, lcs_in_list
 
 
 def getFeatures(outfile, datadir, recompute=False):
