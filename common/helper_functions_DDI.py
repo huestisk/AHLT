@@ -195,13 +195,16 @@ def find_best_node_match(arr, list_arrays):
 
     return np.argmax(overlap)
 
+
 clues_effect = ['administer', 'potentiate', 'prevent', 'administers', 'potentiates', 'prevents', 'effect',
                 'effects', 'reaction', 'reactions', 'inhibited', 'caused']
 clues_mechanism = ['reduce', 'increase', 'decrease', 'reduces', 'increases', 'increased', 'decreases',
                    'decreased', 'reduced', 'elevated', 'exert', 'diminish', 'lessen', 'elevate', 'augment', 'enhance',
                    'extend', 'rise', 'raise']
 clues_int = ['interact', 'interaction', 'interacts', 'interactions']
-clues_advise = ['should', 'recommended', 'contraindicated', 'administration', 'caution']
+clues_advise = ['should', 'recommended',
+                'contraindicated', 'administration', 'caution']
+
 
 def check_clues(node):
     word = node['word']
@@ -216,6 +219,7 @@ def check_clues(node):
         return 'advise'
     else:
         return None
+
 
 def check_interaction(analysis, entities, e1, e2, stext=None):
     """
@@ -282,44 +286,37 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
             subtree[0] = subtree[0][:idx+1]
             break
 
-    #extract separate lists
-    list1, list2 = map(list,zip(subtree))
-    #flatten
-    list1 = [item for elem in list1 for item in elem]
-    list2 = [item for elem in list2 for item in elem]
-
-    # rule 1 - check if there is a common verb for the nodes
-    for node in list1:
-        if node in list2:
-            if analysis.nodes[node]['tag'] in 'VBN':
-                #print("found verb:", analysis.nodes[node]['word'])
-                result = check_clues(analysis.nodes[node])
-                if result is not None:
-                    break
-
-    if result is None:
-        # rule 2 - check if there is a verb between nodes
-        for between in range(ids[e1]+1, ids[e2]):
-            if analysis.nodes[between]['tag']=='VBN' and result is None:
-                verb = analysis.nodes[node]['word']
-                #print("found verb between words:", analysis.nodes[node]['word'])
-                result = check_clues(analysis.nodes[node])
-
-
-    # Make prediction
+    # rule 0 - check if branch lengths are too big
     branch_length = [len(branch) for branch in subtree]
     # with open('branches.txt', 'a') as f:
     #     print(branch_length, file=f)
-    if max(branch_length) > 6 or min(branch_length) > 5:
-        return None
+    if max(branch_length) > 5 or min(branch_length) > 3:
+       return None
 
-    #lowest_common_subsummer = nodes[subtree[0][-1]]
-    #result = check_clues(lowest_common_subsummer)
+    # rule 1 - check whether one entity is inside the subject of one
+    # verb, and the other is inside the direct object of the same verb
+    lowest_common_subsummer = nodes[subtree[0][-1]]
+    if lowest_common_subsummer['ctag'] == 'VB' and min(branch_length) != 1:
+        rel1 = analysis.nodes[subtree[0][-2]]['rel']
+        rel2 = analysis.nodes[subtree[1][-2]]['rel']
+        if (rel1 == 'nsubj' and rel2 == 'obj') or (rel2 == 'nsubj' and rel1 == 'obj'):
+            result = check_clues(lowest_common_subsummer)
+
+    if result is not None:
+        return result
+
+    # rule 2 - check if there is a verb between nodes
+    for between in range(id_e1+1, id_e2):
+        node = analysis.nodes[between]
+        if node['ctag'] == 'VB':
+            result = check_clues(node)
 
     return result
 
 
 """ ML Functions """
+
+
 def computeFeatures(analysis, entities, e1, e2, stext):
 
     # DEBUG
@@ -434,9 +431,10 @@ def getFeatures(outfile, datadir, recompute=False):
                     gold = p.attributes["type"].value
                 # Compute features
                 data = np.array((sid, id_e1, id_e2, gold), dtype=str)
-                feats = computeFeatures(analysis, entities, id_e1, id_e2, stext)
+                feats = computeFeatures(
+                    analysis, entities, id_e1, id_e2, stext)
                 if feats is None:
-                    continue    #FIXME
+                    continue  # FIXME
                 data = np.concatenate((data, feats))
                 features.append(data)
 
