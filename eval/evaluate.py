@@ -5,6 +5,10 @@ import subprocess
 datadir = sys.argv[1]
 outfile = sys.argv[2]
 
+# on linux
+from evaluator import evaluate
+evaluate('DDI', datadir, outfile)
+
 # Send file to Raspberry Pi
 cmd = "scp /Users/kevinhuestis/Development/AHLT/{} pi@192.168.1.123:/home/pi/AHLT/{}".format(
     outfile, outfile)

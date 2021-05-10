@@ -234,12 +234,6 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
 
     result = None
 
-    # DEBUG
-    if stext is not None:
-        e1_word = stext[int(entities[e1][0]):int(entities[e1][-1])+1]
-        e2_word = stext[int(entities[e2][0]):int(entities[e2][-1])+1]
-        # words = [analysis.nodes[node]['word'] for node in analysis.nodes]
-
     # Extract Node offsets
     nodes = analysis.nodes
     n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(
@@ -288,15 +282,14 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
 
     # rule 0 - check if branch lengths are too big
     branch_length = [len(branch) for branch in subtree]
-    # with open('branches.txt', 'a') as f:
-    #     print(branch_length, file=f)
-    if max(branch_length) > 5 or min(branch_length) > 3:
-       return None
+    # if max(branch_length) > 5 or min(branch_length) > 3:
+    #    return None
 
     # rule 1 - check whether one entity is inside the subject of one
     # verb, and the other is inside the direct object of the same verb
     lowest_common_subsummer = nodes[subtree[0][-1]]
-    if lowest_common_subsummer['ctag'] == 'VB' and min(branch_length) != 1:
+    # if lowest_common_subsummer['ctag'] == 'VB' and 
+    if min(branch_length) != 1:
         rel1 = analysis.nodes[subtree[0][-2]]['rel']
         rel2 = analysis.nodes[subtree[1][-2]]['rel']
         if (rel1 == 'nsubj' and rel2 == 'obj') or (rel2 == 'nsubj' and rel1 == 'obj'):
@@ -318,13 +311,6 @@ def check_interaction(analysis, entities, e1, e2, stext=None):
 
 
 def computeFeatures(analysis, entities, e1, e2, stext):
-
-    # DEBUG
-    if stext is not None:
-        e1_word = stext[int(entities[e1][0]):int(entities[e1][-1])+1]
-        e2_word = stext[int(entities[e2][0]):int(entities[e2][-1])+1]
-        # words = [analysis.nodes[node]['word'] for node in analysis.nodes]
-
     # Extract Node offsets
     nodes = analysis.nodes
     n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(

@@ -45,4 +45,3 @@ for f in os.listdir(datadir):
                 if ddi_type is not None:
                     with open(outfile, 'a') as f:
                         print(sid + "|" + id_e1 + "|" + id_e2 + "|" + ddi_type, file=f)
-
