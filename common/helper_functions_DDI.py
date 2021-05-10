@@ -359,16 +359,29 @@ def computeFeatures(analysis, entities, e1, e2, stext):
     least_common_subsummer = nodes[subtree[0][-1]]
     lcs_in_list = check_clues(least_common_subsummer)
 
-    # Create features
-    e1_tag = f"e1_tag={nodes[id_e1]['tag']}"
-    e2_tag = f"e2_tag={nodes[id_e2]['tag']}"
-    lcs_lemma = f"lcs_lemma={least_common_subsummer['lemma']}"
-    lcs_tag = f"lcs_tag={least_common_subsummer['tag']}"
-    max_branch_len = f"max_br_len={max(branch_length)}"
-    min_branch_len = f"min_br_len={min(branch_length)}"
-    lcs_in_list = f"list={lcs_in_list}"
+    between = None
+    for node_id in range(id_e1+1, id_e2):
+        node = analysis.nodes[node_id]
+        if node['ctag'].startswith('VB'):
+            between = check_clues(node)
+            if between is not None:
+                break
 
-    return e1_tag, e2_tag, lcs_lemma, lcs_tag, max_branch_len, min_branch_len, lcs_in_list
+    # Create features
+    features = []
+    features.append(f"e1_tag={nodes[id_e1]['tag']}")
+    features.append(f"e2_tag={nodes[id_e2]['tag']}")
+    features.append(f"e1_lemma={nodes[id_e1]['lemma']}")
+    features.append(f"e2_lemma={nodes[id_e2]['lemma']}")
+    features.append(f"lcs_lemma={least_common_subsummer['lemma']}")
+    features.append(f"lcs_tag={least_common_subsummer['tag']}")
+    features.append(f"max_br_len={max(branch_length)}")
+    features.append(f"min_br_len={min(branch_length)}")
+    features.append(f"lcs_list={lcs_in_list}")
+    features.append(f"bet_list={between}")
+    features.append(f"direct_above={min(branch_length) == 1}")
+
+    return features
 
 
 def getFeatures(outfile, datadir, recompute=False):
@@ -380,7 +393,9 @@ def getFeatures(outfile, datadir, recompute=False):
         features = pickle.load(open(outfile, 'rb'))
         return features
     except FileNotFoundError:
-        if not yes_or_no("Could not load features. Recompute?"):
+        if recompute:
+            pass
+        elif not yes_or_no("Could not load features. Recompute?"):
             raise Exception
     # Recompute the features
     features = []
