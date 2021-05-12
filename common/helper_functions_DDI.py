@@ -315,7 +315,7 @@ def computeFeatures(analysis, entities, e1, e2, stext):
 
     # Get node IDs for entities
     ids = dict()
-    for e in [e1, e2]:
+    for e in entities:
         e_offset = np.array(entities[e])
         n_idx = find_best_node_match(e_offset, n_offsets)
         n_key = list(nodes.keys())[n_idx]
@@ -358,14 +358,58 @@ def computeFeatures(analysis, entities, e1, e2, stext):
     branch_length = [len(branch) for branch in subtree]
     least_common_subsummer = nodes[subtree[0][-1]]
     lcs_in_list = check_clues(least_common_subsummer)
+    
+    lcs_id = subtree[0][-1]
+    if (lcs_id > id_e1 and lcs_id < id_e2) or (lcs_id > id_e2 and lcs_id < id_e1):
+        lcs_loc = 'between'
+    elif lcs_id < id_e1 and lcs_id < id_e2:
+        lcs_loc = 'before'
+    elif lcs_id > id_e1 and lcs_id > id_e2:
+        lcs_loc = 'after'
+    else:
+        lcs_loc = None
 
     between = None
+    bet_lemma = None
     for node_id in range(id_e1+1, id_e2):
         node = analysis.nodes[node_id]
         if node['ctag'].startswith('VB'):
             between = check_clues(node)
             if between is not None:
+                bet_lemma = node['lemma']
                 break
+
+    path = ''
+    path_lemma = ''
+    for b in subtree[0]:
+        if b == subtree[0][-1]:
+            path += nodes[b]['tag']
+        else:
+            path += nodes[b]['rel'] + "<"
+    for b in reversed(subtree[1]):
+        if b != subtree[1][-1]:
+            path += ">" + nodes[b]['rel']
+
+    if len(subtree[0]) > 1:
+        short_path = str(nodes[subtree[0][-2]]['rel']) + "<"
+    else:
+        short_path = "None<"
+    
+    short_path += str(least_common_subsummer['tag']) + ">"
+
+    if len(subtree[1]) > 1:
+        short_path += str(nodes[subtree[1][-2]]['rel']) 
+    else:
+        short_path += "None"
+
+    ents_on_path = False
+    ents_between = False
+    for id in ids.values():
+        if id != id_e1 and id != id_e2:
+            if not ents_on_path:
+                ents_on_path = id in subtree[0] or id in subtree[1]
+            if not ents_between:
+                ents_between = (id > id_e1 and id < id_e2) or (id > id_e2 and id < id_e1)
 
     # Create features
     features = []
@@ -373,13 +417,25 @@ def computeFeatures(analysis, entities, e1, e2, stext):
     features.append(f"e2_tag={nodes[id_e2]['tag']}")
     features.append(f"e1_lemma={nodes[id_e1]['lemma']}")
     features.append(f"e2_lemma={nodes[id_e2]['lemma']}")
+
+    features.append(f"lcs_tag={least_common_subsummer['tag']}") 
     features.append(f"lcs_lemma={least_common_subsummer['lemma']}")
-    features.append(f"lcs_tag={least_common_subsummer['tag']}")
-    features.append(f"max_br_len={max(branch_length)}")
-    features.append(f"min_br_len={min(branch_length)}")
     features.append(f"lcs_list={lcs_in_list}")
+    features.append(f"lcs_loc={lcs_loc}")
+
+    features.append(f"branch1_long={branch_length[0] > 3}")
+    features.append(f"branch2_long={branch_length[1] > 3}")
+    
     features.append(f"bet_list={between}")
+    features.append(f"bet_lemma={bet_lemma}")
     features.append(f"direct_above={min(branch_length) == 1}")
+
+    features.append(f"other_ents={len(entities) > 2}")
+    features.append(f"ents_on_path={ents_on_path}")
+    features.append(f"ents_between={ents_between}")
+
+    features.append(f"path={path}")
+    features.append(f"short_path={short_path}")
 
     return features
 

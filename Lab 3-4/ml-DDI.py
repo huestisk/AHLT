@@ -11,8 +11,9 @@ from helper_functions_DDI import getFeatures
 
 
 """ Get Features """
-train = getFeatures("train.feat", "data/train/", recompute=True)
-devel = getFeatures("devel.feat", "data/devel/", recompute=True)
+train = getFeatures("train.feat", "data/train/", recompute=False)
+devel = getFeatures("devel.feat", "data/devel/", recompute=False)
+test = getFeatures("test.feat", "data/test/", recompute=False)
 
 # cheat = features[features[:,3]!='None']
 # cheat = np.array([cheat[:,3], cheat[:,6]]).T  
@@ -36,7 +37,7 @@ X = feat_encoder.fit_transform(features)
 pickle.dump(feat_encoder, open('encoder.pkl','wb'))
 
 # Create & train model
-svm = LinearSVC(dual=False, class_weight='balanced', max_iter=10000)
+svm = LinearSVC(dual=False, max_iter=10000) # class_weight='balanced'
 svm.fit(X, classes)
 pickle.dump(svm, open("svm.model",'wb'))
 
@@ -60,4 +61,21 @@ for idx in range(len(ddi)):
     e1 = devel[idx, 1]
     e2 = devel[idx, 2]
     with open("devel.out", 'a') as f:
+        print(f"{sid}|{e1}|{e2}|{ddi[idx]}", file=f)
+
+""" Test """
+features = test[:, 4:]
+X = feat_encoder.transform(features)
+ddi = svm.predict(X)
+
+# delete old file
+if os.path.exists("test.out"):
+    os.remove("test.out")
+
+# Print to file
+for idx in range(len(ddi)):
+    sid = test[idx, 0]
+    e1 = test[idx, 1]
+    e2 = test[idx, 2]
+    with open("test.out", 'a') as f:
         print(f"{sid}|{e1}|{e2}|{ddi[idx]}", file=f)
