@@ -1,8 +1,11 @@
 #from eval.evaluator import evaluate
 import sys
+#import split_folders
+import sys
+
 from helper_functions import *
 from neural_network import *
-import sys
+
 # you can comment out this, it just sets my path to the root folder instead of lab5
 sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
 
@@ -10,19 +13,16 @@ sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
 datadir = sys.argv[1]
 
 
-test_idx = {'words': { '<PAD >':0 , '<UNK >':1 , '11-day ':2 , 'murine':3 , 'criteria ':4 ,
-            'stroke':5,'levodopa':8511, 'terfenadine':8512},
-            'labels ': {'<PAD >':0, 'B- group':1, 'B- drug_n':2, 'I- drug_n':3, 'O':4,
-            'I- group':5, 'B- drug':6, 'I- drug':7, 'B- brand':8, 'I- brand':9},
-            'maxlen':100
-            }
-
 #TODO split data into dirs for train and test
+#split_folders.ratio(datadir, output="splitted_folder", seed=1337, ratio=(.8,.2))
 
 # test - these should be used in neural_network.py
 data = load_data(datadir)
-idx = create_indexs(dataset=data,max_length=100)
-print(idx)
+#print(data)
+idx = create_indexs(dataset=data,max_length=10)
+#print(idx)
+encoded = encode_labels(dataset=data, idx=idx)
+print(encoded[0])
 #idx = create_indexs(dataset=data, max_length=10)
 #X = encode_words(dataset=data, idx=idx)
 #y = encode_labels(dataset=data, idx=idx)

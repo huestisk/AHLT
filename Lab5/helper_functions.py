@@ -27,6 +27,7 @@ def load_data(datadir):
             ...
         }
     '''
+    # TODO len(entities) can be zero, then no comparison is needed
     dataset = {}
     sentence_tuples = []
     # process each file in directory
@@ -42,28 +43,34 @@ def load_data(datadir):
             # tokenize text
             tokens = tokenize(stext)
             #print("tokens:", tokens)
-            #TODO ADD GROUND TRUTH TO TUPLE
-            entities = tree.getElementsByTagName("entity")
+            #entities = []
+            #for ent in s.getiterator():
+            #    entities.append(ent.getElementsByTagName('entity'))
+            entities = s.getElementsByTagName("entity")
             #beginning_tag for B-I-O tagging
             B_tag = True
             #for each word tuple, check if any entity tag contains the word and type
             for word_tuple in tokens:
                 found_type = False
-
+                #print("word to look for:", word_tuple[0])
                 for e in entities:
+                    #print("word entitiy to compare to:",e.attributes["text"].value )
                     if e.attributes["text"].value == word_tuple[0]:
-                        #print("FOUND TYPE")
+                        #print("FOUND TYPE:", e.attributes["text"].value)
                         if B_tag == True:
                             new_tuple = word_tuple + ('B-' + e.attributes["type"].value,)
                         else:
                             new_tuple = word_tuple + ('I-' + e.attributes["type"].value,)
                         sentence_tuples.append(new_tuple)
                         found_type=True
+                        #break to not ad double
+                        break
                 #type not found, set to None
                 if found_type == False:
                     new_tuple = word_tuple + ('O',)
                     sentence_tuples.append(new_tuple)
                 dataset[sid] = sentence_tuples
+                
                 B_tag = False
             #print(dataset)
 
@@ -103,16 +110,14 @@ def create_indexs(dataset, max_length):
     words_dict['<PAD>'] = 0
     words_dict['<UNK>'] = 1
     labels_dict['<PAD>'] = 0
+    labels_dict['O'] = 1
     word_counter = 2
-    label_counter = 1
+    label_counter = 2
 
     #iterate sentences
     for key,value in dataset.items():
-        len_counter = 0
         #iterate list of tuples
         for word_tuple in value:
-            #if len_counter == max_length:
-            #    break
             #check if word has a type and if key already exists
             if (word_tuple[3] is not 'O') and (word_tuple[0] not in words_dict.keys()):
                 words_dict[word_tuple[0]] = word_counter
@@ -122,7 +127,7 @@ def create_indexs(dataset, max_length):
                 if word_tuple[3] not in labels_dict.keys():
                     labels_dict[word_tuple[3]] = label_counter
                     label_counter = label_counter + 1
-            #len_counter = len_counter + 1
+
 
     idx['words'] = words_dict
     idx['labels'] = labels_dict
@@ -145,8 +150,8 @@ def encode_words(dataset, idx):
                         label indexes , as well as the maximum sentence length .
 
     Output: The dataset encoded as a list of sentence , each of them is a list of
-            word indices . If the word is not in the index , <UNK > code is used . If
-            the sentence is shorter than max_len it is padded with <PAD > code .
+            word indices . If the word is not in the index , <UNK> code is used . If
+            the sentence is shorter than max_len it is padded with <PAD> code .
 
     Example:
         >>> encode_words(traindata, idx)
@@ -155,7 +160,35 @@ def encode_words(dataset, idx):
             ...
             [2002 6582 7518 ... 0 0 0]]
     '''
-    pass
+    words_encoded = []
+    maxlen = idx['maxlen']
+
+    # iterate sentences
+    for key, value in dataset.items():
+        sentence = []
+        iterations = 1
+        # iterate list of tuples (word, start, end, type)
+        for word_tuple in value:
+            #check if word in dict, else unknown UNK tag (1 directly instead of doing a lookup)
+            if word_tuple[0] in idx['words']:
+                sentence.append(idx['words'][word_tuple[0]])
+            else:
+                sentence.append(1)
+            if iterations == maxlen:
+                break
+            iterations = iterations + 1
+
+        #sentence shorter than maxlen, add padding
+        if len(value)<maxlen:
+            diff = idx['maxlen'] - len(value)
+            #print(diff)
+            for i in range(1,diff+1):
+                sentence.append([0])
+        #print(sentence)
+        words_encoded.append(sentence)
+        
+    
+    return words_encoded
 
 def encode_labels(dataset, idx):
     '''
@@ -177,7 +210,30 @@ def encode_labels(dataset, idx):
             ...
             [[4] [8] [9] [4] [4] [4] ... [0] [0]]]
     '''
-    pass
+    labels_encoded = []
+    maxlen = idx['maxlen']
+
+    # iterate sentences
+    for key, value in dataset.items():
+        sentence = []
+        iterations = 1
+        # iterate list of tuples (word, start, end, type)
+        for word_tuple in value:
+            sentence.append([idx['labels'][word_tuple[3]]])
+            
+            if iterations == maxlen:
+                break
+            iterations = iterations + 1
+
+        # sentence shorter than maxlen, add padding
+        if len(value) < maxlen:
+            diff = idx['maxlen'] - len(value)
+            for i in range(1, diff + 1):
+                sentence.append([0])
+        # print(sentence)
+        labels_encoded.append(sentence)
+
+    return labels_encoded
     #Note: The shape of the produced list may need to be adjusted depending
     #on the architecture of your network and the kind of output layer you use.
 
