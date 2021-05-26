@@ -39,31 +39,22 @@ def load_data(datadir):
         for s in sentences:
             sid = s.attributes["id"].value  # get sentence id
             stext = s.attributes["text"].value  # get sentence text
-            #print("stext:", stext)
             # tokenize text
             tokens = tokenize(stext)
-            #print("tokens:", tokens)
-            #entities = []
-            #for ent in s.getiterator():
-            #    entities.append(ent.getElementsByTagName('entity'))
             entities = s.getElementsByTagName("entity")
-            #beginning_tag for B-I-O tagging
             B_tag = True
             #for each word tuple, check if any entity tag contains the word and type
             for word_tuple in tokens:
                 found_type = False
-                #print("word to look for:", word_tuple[0])
                 for e in entities:
-                    #print("word entitiy to compare to:",e.attributes["text"].value )
                     if e.attributes["text"].value == word_tuple[0]:
-                        #print("FOUND TYPE:", e.attributes["text"].value)
                         if B_tag == True:
                             new_tuple = word_tuple + ('B-' + e.attributes["type"].value,)
                         else:
                             new_tuple = word_tuple + ('I-' + e.attributes["type"].value,)
                         sentence_tuples.append(new_tuple)
                         found_type=True
-                        #break to not ad double
+                        #break to not add double
                         break
                 #type not found, set to None
                 if found_type == False:
@@ -72,7 +63,6 @@ def load_data(datadir):
                 dataset[sid] = sentence_tuples
                 
                 B_tag = False
-            #print(dataset)
 
     return dataset
 
@@ -100,9 +90,7 @@ def create_indexs(dataset, max_length):
             ’maxlen ’ : 100
             }
     '''
-    
-    #TODO implement max_len
-    
+
     idx = {}
     words_dict = {}
     labels_dict = {}
@@ -122,7 +110,7 @@ def create_indexs(dataset, max_length):
             if (word_tuple[3] is not 'O') and (word_tuple[0] not in words_dict.keys()):
                 words_dict[word_tuple[0]] = word_counter
                 word_counter = word_counter + 1
-
+                
                 #check if label key already exists
                 if word_tuple[3] not in labels_dict.keys():
                     labels_dict[word_tuple[3]] = label_counter
@@ -181,13 +169,11 @@ def encode_words(dataset, idx):
         #sentence shorter than maxlen, add padding
         if len(value)<maxlen:
             diff = idx['maxlen'] - len(value)
-            #print(diff)
             for i in range(1,diff+1):
                 sentence.append([0])
-        #print(sentence)
+
         words_encoded.append(sentence)
         
-    
     return words_encoded
 
 def encode_labels(dataset, idx):
@@ -230,7 +216,6 @@ def encode_labels(dataset, idx):
             diff = idx['maxlen'] - len(value)
             for i in range(1, diff + 1):
                 sentence.append([0])
-        # print(sentence)
         labels_encoded.append(sentence)
 
     return labels_encoded
@@ -256,11 +241,11 @@ def output_entities(dataset, preds, outfile):
             DDI - DrugBank . d283 .s5 |196 -208| fibrate drugs | group
             ...
     '''
-
+    #TODO preds might need further unpacking
     for key, value in dataset.items():
         sid = key
         # iterate list of tuples (word, start, end, type)
-        for word_tuple, label in zip(value,preds):
+        for word_tuple, label in zip(value, preds):
             if label is 'O':
                 print("not predicted as anything")
                 continue

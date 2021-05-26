@@ -21,7 +21,6 @@ def build_network (idx):
     n_labels = len(idx['labels'])
     max_len = idx['maxlen']
 
-
     model_lstm.add(Embedding(input_dim=max_len, output_dim=256, input_length = n_words))
     model_lstm.add(SpatialDropout1D(0.3))
     model_lstm.add(LSTM(256, dropout=0.3, recurrent_dropout=0.3))
@@ -101,14 +100,13 @@ def save_model_and_indexs(model, idx, filename):
     Output: Saves the model into filename .nn and the indexes into filename .idx
     '''
 
-
     if not os.path.exists('models'):
         os.makedirs('models')
     
-    #Save model
+    # Save model
     model.save('models/'+filename+'.nn')
     
-    #Save indexes
+    # Save indexes
     with open('models/'+filename+'.idx', 'w') as f:
         print(idx, file=f)
 
