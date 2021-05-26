@@ -237,7 +237,8 @@ def encode_labels(dataset, idx):
     #Note: The shape of the produced list may need to be adjusted depending
     #on the architecture of your network and the kind of output layer you use.
 
-def output_entities(dataset, preds):
+
+def output_entities(dataset, preds, outfile):
     '''
     Task: Output detected entities in the format expected by the evaluator
 
@@ -255,5 +256,17 @@ def output_entities(dataset, preds):
             DDI - DrugBank . d283 .s5 |196 -208| fibrate drugs | group
             ...
     '''
+
+    for key, value in dataset.items():
+        sid = key
+        # iterate list of tuples (word, start, end, type)
+        for word_tuple, label in zip(value,preds):
+            if label is 'O':
+                print("not predicted as anything")
+                continue
+            #TODO check if this is the right way to calculate offset
+            offset = word_tuple[1] + "-" + word_tuple[2]
+            with open(outfile, 'a') as f:
+                print(sid + "|" + offset + "|" + word_tuple[0] + "|" + label, file=f)
+                
     #Note: Most of this function can be reused from NER-ML exercise.
-    pass

@@ -1,28 +1,28 @@
 #from eval.evaluator import evaluate
+import os
+os.system("python --version")
 import sys
-#import split_folders
+import shutil
+import numpy as np
 import sys
 
 from helper_functions import *
 from neural_network import *
 
 # you can comment out this, it just sets my path to the root folder instead of lab5
-sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
+#sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
 
 # parse arguments
 datadir = sys.argv[1]
 
-
-#TODO split data into dirs for train and test
-#split_folders.ratio(datadir, output="splitted_folder", seed=1337, ratio=(.8,.2))
-
+learn('data/train/','data/test/', 'LSTMTEST' )
 # test - these should be used in neural_network.py
-data = load_data(datadir)
+#data = load_data(datadir)
 #print(data)
-idx = create_indexs(dataset=data,max_length=10)
+#idx = create_indexs(dataset=data,max_length=100)
 #print(idx)
-encoded = encode_labels(dataset=data, idx=idx)
-print(encoded[0])
+#encoded = encode_labels(dataset=data, idx=idx)
+#print(encoded[0])
 #idx = create_indexs(dataset=data, max_length=10)
 #X = encode_words(dataset=data, idx=idx)
 #y = encode_labels(dataset=data, idx=idx)

@@ -2,6 +2,11 @@ import os
 import ast
 import tensorflow as tf
 from tensorflow import keras
+from helper_functions import *
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+
 
 def build_network (idx):
     '''
@@ -16,24 +21,17 @@ def build_network (idx):
     n_labels = len(idx['labels'])
     max_len = idx['maxlen']
 
-    
 
-    # create network layers
-    inp = Input(shape = (max_len,))
-    ## ... add missing layers here ... #
-    #out = 0# final output layer
-
-    model_lstm = Sequential()
-    model_lstm.add(Embedding(input_dim=inp, output_dim=256, input_length=max_len))
+    model_lstm.add(Embedding(input_dim=max_len, output_dim=256, input_length = n_words))
     model_lstm.add(SpatialDropout1D(0.3))
     model_lstm.add(LSTM(256, dropout=0.3, recurrent_dropout=0.3))
     model_lstm.add(Dense(256, activation='relu'))
     model_lstm.add(Dropout(0.3))
-    model_lstm.add(Dense(5, activation='softmax'))
+    model_lstm.add(Dense(n_labels, activation='softmax'))
     model_lstm.compile(
         loss='categorical_crossentropy',
         optimizer='Adam',
-        metrics=['accuracy','loss','f1']
+        metrics=['accuracy']
     )
 
     return model
@@ -108,7 +106,7 @@ def save_model_and_indexs(model, idx, filename):
         os.makedirs('models')
     
     #Save model
-    #model.save('models/'+filename+'.nn')
+    model.save('models/'+filename+'.nn')
     
     #Save indexes
     with open('models/'+filename+'.idx', 'w') as f:
@@ -127,8 +125,7 @@ def load_model_and_indexs(filename):
     model = None
     idx = None
     try:
-        model ="hej"
-        #model = keras.models.load_model('/models/'+filename+'.nn')
+        model = keras.models.load_model('/models/'+filename+'.nn')
     except:
         print("Model named [",filename, ".nn] does not exist." )
 
@@ -139,7 +136,6 @@ def load_model_and_indexs(filename):
         idx = ast.literal_eval(contents)
         file.close()
     except:
-        print("Idx named [",filename, ".idx] does not exist." )
-
+        print("Idx named [", filename, ".idx] does not exist.")
 
     return model, idx
