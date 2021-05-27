@@ -1,10 +1,9 @@
 #from eval.evaluator import evaluate
 import os
-os.system("python --version")
 import sys
 import shutil
 import numpy as np
-import sys
+os.system("python --version")
 
 from helper_functions import *
 from neural_network import *

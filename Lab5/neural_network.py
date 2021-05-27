@@ -1,14 +1,18 @@
 import os
 import ast
 import tensorflow as tf
+import numpy as np
 from tensorflow import keras
 from helper_functions import *
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
 
 
-def build_network (idx):
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, Dropout, Bidirectional, Input
+from keras_contrib.layers import CRF
+from tensorflow.keras.utils import to_categorical
+
+
+def build_network(idx):
     '''
     Task: Create network for the learner .
 
@@ -21,18 +25,17 @@ def build_network (idx):
     n_labels = len(idx['labels'])
     max_len = idx['maxlen']
 
-    model_lstm.add(Embedding(input_dim=max_len, output_dim=256, input_length = n_words))
-    model_lstm.add(SpatialDropout1D(0.3))
-    model_lstm.add(LSTM(256, dropout=0.3, recurrent_dropout=0.3))
-    model_lstm.add(Dense(256, activation='relu'))
-    model_lstm.add(Dropout(0.3))
-    model_lstm.add(Dense(n_labels, activation='softmax'))
-    model_lstm.compile(
-        loss='categorical_crossentropy',
-        optimizer='Adam',
-        metrics=['accuracy']
-    )
-
+    input = Input(shape=(max_len,))
+    model = Embedding(input_dim=n_words + 1, output_dim=20,
+                      input_length=max_len, mask_zero=True)(input)  # 20-dim embedding
+    model = Bidirectional(LSTM(units=50, return_sequences=True,
+                               recurrent_dropout=0.1))(model)  # variational biLSTM
+    model = TimeDistributed(Dense(50, activation="relu"))(model)  # a dense layer as suggested by neuralNer
+    crf = CRF(n_labels)  # CRF layer
+    out = crf(model)  # output
+    model = Model(input, out)
+    model.compile(optimizer="rmsprop", loss=crf.loss_function, metrics=[crf.accuracy])
+    model.summary()
     return model
 
 def learn(traindir, validationdir, modelname):
@@ -57,8 +60,21 @@ def learn(traindir, validationdir, modelname):
     X_test = encode_words(valdata, idx)
     y_test = encode_labels(valdata, idx)
 
+
+    print("ytrain shape", np.shape(y_train))
+    print("ytest shape", np.shape(y_test))
+    print("Xtrain shape", np.shape(X_train))
+    print("Xtest shape", np.shape(X_test))
+
+    y_train = np.array([to_categorical(i, num_classes=10) for i in y_train])
+    y_test = np.array([to_categorical(i, num_classes=10) for i in y_test])
+
+    print("ytrain shape after", np.shape(y_train))
+    print("ytest shape after", np.shape(y_test))
+
+
     # train model
-    model.fit(X_train, y_train , validation_data =(X_test, y_test))
+    model.fit(X_train, y_train, epochs=5, validation_data=(X_test, y_test), validation_steps=1, verbose=2)
 
     # save model and indexs, for later use in prediction
     save_model_and_indexs(model, idx, modelname)

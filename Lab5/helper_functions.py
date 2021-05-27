@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy as np
 # you can comment out this, it just sets my path to the root folder instead of lab5
 sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
 
@@ -107,7 +108,7 @@ def create_indexs(dataset, max_length):
         #iterate list of tuples
         for word_tuple in value:
             #check if word has a type and if key already exists
-            if (word_tuple[3] is not 'O') and (word_tuple[0] not in words_dict.keys()):
+            if (word_tuple[3] != 'O') and (word_tuple[0] not in words_dict.keys()):
                 words_dict[word_tuple[0]] = word_counter
                 word_counter = word_counter + 1
                 
@@ -170,11 +171,11 @@ def encode_words(dataset, idx):
         if len(value)<maxlen:
             diff = idx['maxlen'] - len(value)
             for i in range(1,diff+1):
-                sentence.append([0])
+                sentence.append(0)
 
-        words_encoded.append(sentence)
+        words_encoded.append(np.array(sentence))
         
-    return words_encoded
+    return np.array(words_encoded)
 
 def encode_labels(dataset, idx):
     '''
@@ -205,7 +206,8 @@ def encode_labels(dataset, idx):
         iterations = 1
         # iterate list of tuples (word, start, end, type)
         for word_tuple in value:
-            sentence.append([idx['labels'][word_tuple[3]]])
+            sentence.append(idx['labels'][word_tuple[3]])
+            #labels_encoded.append(idx['labels'][word_tuple[3]])
             
             if iterations == maxlen:
                 break
@@ -215,10 +217,12 @@ def encode_labels(dataset, idx):
         if len(value) < maxlen:
             diff = idx['maxlen'] - len(value)
             for i in range(1, diff + 1):
-                sentence.append([0])
-        labels_encoded.append(sentence)
+                sentence.append(0)
+                #labels_encoded.append(0)
+        labels_encoded.append(np.array(sentence))
+    #print(labels_encoded)
 
-    return labels_encoded
+    return np.array(labels_encoded)
     #Note: The shape of the produced list may need to be adjusted depending
     #on the architecture of your network and the kind of output layer you use.
 
@@ -246,7 +250,7 @@ def output_entities(dataset, preds, outfile):
         sid = key
         # iterate list of tuples (word, start, end, type)
         for word_tuple, label in zip(value, preds):
-            if label is 'O':
+            if label == 'O':
                 print("not predicted as anything")
                 continue
             #TODO check if this is the right way to calculate offset
