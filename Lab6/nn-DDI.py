@@ -15,4 +15,5 @@ datadir = sys.argv[1]
 
 # test - these should be used in neural_network.py
 data = load_data('/Users/betty/Desktop/AHLT/AHLT/data/test/')
-print(data)
+idx = create_indexs(data, 100)
+print(idx)

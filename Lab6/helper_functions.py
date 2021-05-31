@@ -79,10 +79,68 @@ def load_data(datadir):
                     #if ddi is not 'null':
                     #    print("sentence:",sid,"pair", e1,"-", e2, ddi)
 
-                    case.append([sid, e1, e2, ddi, tokens])
+                    case.append(sid)
+                    case.append(e1)
+                    case.append(e2)
+                    case.append(ddi)
+                    case.append(tokens)
                     classification_cases.append(case)
                     
     return classification_cases
+
+
+def create_indexs(dataset, max_length):
+    '''
+    Task:   Create index dictionaries both for input (words) and output (labels)
+            from given dataset.
+
+    Input:  dataset: dataset produced by load_data.
+            max_length: maximum length of a sentence (longer sentences will
+            be cut, shorter ones will be padded).
+
+    Output: A dictionary where each key is an index name (e.g. "words", "labels"),
+            and the value is a dictionary mapping each word/label to a number.
+            An entry with the value for maxlen is also stored
+    Example:
+        >>> create_indexs(traindata)
+            {’words’: {’<PAD>’:0, ’<UNK>’:1, ’11-day’:2, ’murine’:3, ’criteria’:4,
+            ’stroke’:5,...,’levodopa’:8511, ’terfenadine’:8512}
+            ’labels’: {’null’:0, ’mechanism’:1, ’advise’:2, ’effect’:3, ’int’:4}
+            ’maxlen’: 100
+            }
+    '''
+
+    idx = {}
+    words_dict = {}
+    labels_dict = {}
+
+    words_dict['<PAD>'] = 0
+    words_dict['<UNK>'] = 1
+    labels_dict['null'] = 0
+    word_counter = 2
+    label_counter = 1
+    
+    for case in dataset:
+        # check interaction type and add to label
+        if (case[3] is not 'null') and (case[3] not in labels_dict.keys()):
+            labels_dict[case[3]] = label_counter
+            label_counter = label_counter + 1
+        for word_tuple in case[4]:
+            # if word is not already in dict, add it
+            if word_tuple[0] not in words_dict.keys():
+                words_dict[word_tuple[0]] = word_counter
+                word_counter = word_counter +1
+
+    idx['words'] = words_dict
+    idx['labels'] = labels_dict
+    idx['maxlen'] = max_length
+
+    return idx
+
+    # Add ’<PAD>’:0 and ’<UNK>’:1 codes to ’words’ index. The coding of the
+    # rest of the words/labels is arbitrary. You may add to the dictionary entries
+    # with indexes for other elements you want to use (lemmas, PoS, etc)
+    # This indexes will be needed by the predictor to properly use the model
 
 
 
@@ -135,32 +193,6 @@ def encode_labels(dataset, idx):
     # Note: The shape of the produced list may need to be adjusted depending
     # on the architecture of your network and the kind of output layer you use.
 
-
-def create_indexs(dataset, max_length):
-    '''
-    Task:   Create index dictionaries both for input (words) and output (labels)
-            from given dataset.
-
-    Input:  dataset: dataset produced by load_data.
-            max_length: maximum length of a sentence (longer sentences will
-            be cut, shorter ones will be padded).
-
-    Output: A dictionary where each key is an index name (e.g. "words", "labels"),
-            and the value is a dictionary mapping each word/label to a number.
-            An entry with the value for maxlen is also stored
-    Example:
-        >>> create_indexs(traindata)
-            {’words’: {’<PAD>’:0, ’<UNK>’:1, ’11-day’:2, ’murine’:3, ’criteria’:4,
-            ’stroke’:5,...,’levodopa’:8511, ’terfenadine’:8512}
-            ’labels’: {’null’:0, ’mechanism’:1, ’advise’:2, ’effect’:3, ’int’:4}
-            ’maxlen’: 100
-            }
-    '''
-
-    # Add ’<PAD>’:0 and ’<UNK>’:1 codes to ’words’ index. The coding of the
-    # rest of the words/labels is arbitrary. You may add to the dictionary entries
-    # with indexes for other elements you want to use (lemmas, PoS, etc)
-    # This indexes will be needed by the predictor to properly use the model
 
 def tokenize(s):
     """
