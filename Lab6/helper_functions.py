@@ -76,8 +76,6 @@ def load_data(datadir):
                     text = s.attributes["text"].value  # get sentence text
                     # tokenize text
                     tokens = tokenize(text)
-                    #if ddi is not 'null':
-                    #    print("sentence:",sid,"pair", e1,"-", e2, ddi)
 
                     case.append(sid)
                     case.append(e1)
@@ -110,6 +108,8 @@ def create_indexs(dataset, max_length):
             }
     '''
 
+    #lemma, pos and offset not included in dict yet
+
     idx = {}
     words_dict = {}
     labels_dict = {}
@@ -122,7 +122,7 @@ def create_indexs(dataset, max_length):
     
     for case in dataset:
         # check interaction type and add to label
-        if (case[3] is not 'null') and (case[3] not in labels_dict.keys()):
+        if (case[3] != 'null') and (case[3] not in labels_dict.keys()):
             labels_dict[case[3]] = label_counter
             label_counter = label_counter + 1
         for word_tuple in case[4]:
@@ -143,7 +143,6 @@ def create_indexs(dataset, max_length):
     # This indexes will be needed by the predictor to properly use the model
 
 
-
 def encode_words(dataset, idx):
     '''
     Task:   Encode the words in a sentence dataset formed by lists of tokens into
@@ -153,9 +152,9 @@ def encode_words(dataset, idx):
             idx:        A dictionary produced by create_indexs, containing word and
                         label indexes , as well as the maximum sentence length .
 
-    Output: The dataset encoded as a list of sentence , each of them is a list of
+    Output: The dataset encoded as a list of sentence, each of them is a list of
             word indices. If the word is not in the index, <UNK> code is used. If
-            the sentence is shorter than max_len it is padded with <PAD > code .
+            the sentence is shorter than max_len it is padded with <PAD> code .
 
     Example:
         >>> encode_words(traindata, idx)
@@ -164,6 +163,31 @@ def encode_words(dataset, idx):
             ...
             [2002 6582 7518 ... 0 0 0]]
     '''
+    encoded_data = []
+    maxlen = idx['maxlen']
+    case_id = None
+
+    for case in dataset:
+        # sentences are duplicated in data, one per pair, but we only need one encoding per sentence.
+        # check if sentence has been iterated already
+        if case[0] is case_id:
+            continue
+        case_id = case[0]
+        encoded_case = []
+        for word_tuple in case[4]:
+            if word_tuple[0] in idx['words']:
+                encoded_case.append(idx['words'][word_tuple[0]])
+            else:
+                encoded_case.append(1)
+        # pad shorter cases
+        if len(encoded_case) < maxlen:
+            encoded_case = (encoded_case + maxlen * [0])[:maxlen]
+        if len(encoded_case) > maxlen:
+            encoded_case = encoded_case[:maxlen]
+            
+        encoded_data.append(encoded_case)
+
+    return np.array(encoded_data)
 
     # Note: You may adapt this function to return more than one list per
     # sentence if you want to use different inputs (lemma, PoS, suffixes...)
@@ -186,10 +210,30 @@ def encode_labels(dataset, idx):
             [[ [4] [6] [4] [4] [4] [4] ... [0] [0]]
             [[4] [4] [8] [4] [6] [4] ... [0] [0]]
             ...
-            [[4] [8] [9] [4] [4] [4] ... [0] [0]]
-            ]
+            [[4] [8] [9] [4] [4] [4] ... [0] [0]]]
     '''
+    case_id = None
+    encoded_case = []
+    encoded_labels = []
+    for i, case in enumerate(dataset):
+        # new sentence
+        if case[0] is not case_id:
+            # skip first iteration, should not append empty list
+            if case_id is not None:
+                encoded_labels.append([encoded_case])
+            encoded_case = []
 
+        encoded_case.append([idx['labels'][case[3]]])
+        
+        # this needed, otherwise last sentence is not appended
+        if i == len(dataset) - 1:
+            encoded_labels.append([encoded_case])
+
+        case_id = case[0]
+    
+    return np.array(encoded_labels)
+
+        
     # Note: The shape of the produced list may need to be adjusted depending
     # on the architecture of your network and the kind of output layer you use.
 
@@ -219,4 +263,5 @@ def tokenize(s):
         start = ans.start() + shift
         shift += ans.end()
         tokens.append((word, start, shift-1))
+
     return tokens

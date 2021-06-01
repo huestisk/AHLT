@@ -158,7 +158,7 @@ def encode_words(dataset, idx):
         iterations = 1
         # iterate list of tuples (word, start, end, type)
         for word_tuple in value:
-            #check if word in dict, else unknown UNK tag (1 directly instead of doing a lookup)
+            #c heck if word in dict, else unknown UNK tag (1 directly instead of doing a lookup)
             if word_tuple[0] in idx['words']:
                 sentence.append(idx['words'][word_tuple[0]])
             else:
@@ -167,15 +167,14 @@ def encode_words(dataset, idx):
                 break
             iterations = iterations + 1
 
-        #sentence shorter than maxlen, add padding
-        if len(value)<maxlen:
-            diff = idx['maxlen'] - len(value)
-            for i in range(1,diff+1):
-                sentence.append(0)
+        # sentence shorter than maxlen, add padding
+        if len(value) < maxlen:
+            sentence = (sentence + maxlen * [0])[:maxlen]
 
         words_encoded.append(np.array(sentence))
         
     return np.array(words_encoded)
+
 
 def encode_labels(dataset, idx):
     '''
@@ -215,12 +214,9 @@ def encode_labels(dataset, idx):
 
         # sentence shorter than maxlen, add padding
         if len(value) < maxlen:
-            diff = idx['maxlen'] - len(value)
-            for i in range(1, diff + 1):
-                sentence.append(0)
-                #labels_encoded.append(0)
+            sentence = (sentence + maxlen * [0])[:maxlen]
+                
         labels_encoded.append(np.array(sentence))
-    #print(labels_encoded)
 
     return np.array(labels_encoded)
     #Note: The shape of the produced list may need to be adjusted depending

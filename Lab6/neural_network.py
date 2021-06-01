@@ -1,3 +1,9 @@
+from helper_functions import *
+import numpy as np
+import tensorflow as tf
+
+from keras.layers import Input, Embedding, Conv1D, GlobalMaxPooling1D, Dense
+
 def build_network(idx):
     '''
     Task:   Create network for the learner.
@@ -12,13 +18,28 @@ def build_network(idx):
     max_len = idx['maxlen']
 
     # create network layers
-    inp = Input(shape=(max_len ,))
+    inp = Input(shape=(max_len,))
      ## ... add missing layers here ... #
     out = 0# final output layer
 
+    from keras.models import Sequential
+    from keras import layers
+    embedding_dim = 100
+    vocab_size = n_words + 1
+
+    model = Sequential()
+    model.add(layers.Embedding(vocab_size, embedding_dim, input_length=max_len))
+    model.add(layers.Conv1D(128, 5, activation='relu'))
+    model.add(layers.GlobalMaxPooling1D())
+    model.add(layers.Dense(10, activation='relu'))
+    model.add(layers.Dense(n_labels, activation='sigmoid'))
+    model.compile(optimizer='adam',
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+
     # create and compile model
-    model = Model(inp, out)
-    model.compile() # set appropriate parameters ( optimizer , loss , etc )
+    #model = Model(inp, out)
+    #model.compile() # set appropriate parameters ( optimizer , loss , etc )
 
     return model
 
@@ -56,9 +77,18 @@ def learn(traindir, validationdir, modelname):
     Ytrain = encode_labels(traindata, idx)
     Xval = encode_words(valdata, idx)
     Yval = encode_labels(valdata, idx)
+    
+    print("xtrain", np.shape(Xtrain))
+    print("Ytrain", np.shape(Ytrain))
+    print("Xval", np.shape(Xval))
+    print("Yval", np.shape(Yval))
+
+
+    #Yval = tf.convert_to_tensor(Yval, dtype=tf.int64)
+    #Ytrain = tf.convert_to_tensor(Ytrain, dtype=tf.int64)
 
     # train model
-    model.fit(Xtrain, Ytrain, validation_data =(Xval, Yval))
+    model.fit(Xtrain, Ytrain, validation_data=(Xval, Yval))
 
     # save model and indexs , for later use in prediction
     save_model_and_indexs(model, idx, modelname)

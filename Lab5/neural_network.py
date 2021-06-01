@@ -104,6 +104,7 @@ def predict(modelname, datadir, outfile):
     # evaluate using official evaluator .
     evaluation(datadir, outfile)
 
+
 def save_model_and_indexs(model, idx, filename):
     '''
     Task: Save given model and indexs to disk
