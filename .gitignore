@@ -7,11 +7,14 @@ resources/
 .vscode/
 exercises/
 .DS_Store
-*.out
 *.feat
 *.pkl
 !data/*.pkl
 *.model
+py/
+.idea
+*models/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
