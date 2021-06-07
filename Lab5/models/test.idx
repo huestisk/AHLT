@@ -1,1 +1,0 @@
-{'labels ': {'B- drug': 6, 'I- drug_n': 3, 'O': 4, 'I- group': 5, 'B- brand': 8, 'I- brand': 9, '<PAD >': 0, 'B- group': 1, 'B- drug_n': 2, 'I- drug': 7}, 'words': {'criteria ': 4, 'levodopa': 8511, 'murine': 3, 'stroke': 5, '11-day ': 2, '<PAD >': 0, 'terfenadine': 8512, '<UNK >': 1}, 'maxlen': 100}
