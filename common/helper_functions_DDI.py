@@ -145,21 +145,21 @@ def get_overlap(arr, list_arrays):
     overlap = np.zeros((len(list_arrays),))
     # Get overlap for each element
     for i, elem in enumerate(list_arrays):
-        if 'None' in elem:
-            continue
-        elem_len = int(elem[1]) - int(elem[0])
-        elem_start_to_arr_start = int(elem[0]) - int(arr[0])
-        elem_end_to_arr_start = int(elem[1]) - int(arr[0])
-        elem_start_to_arr_end = int(elem[0]) - int(arr[1])
-        elem_end_to_arr_end = int(elem[1]) - int(arr[1])
+        # if 'None' in elem:
+        #     continue
         # Case: elem ends before arr starts
+        elem_end_to_arr_start = int(elem[1]) - int(arr[0])
         if elem_end_to_arr_start < 0:
             continue
         # Case: elem starts after arr ends
-        elif elem_start_to_arr_end > 0:
+        elem_start_to_arr_end = int(elem[0]) - int(arr[1])
+        if elem_start_to_arr_end > 0:
             continue
+        elem_len = int(elem[1]) - int(elem[0])
+        elem_start_to_arr_start = int(elem[0]) - int(arr[0])
+        elem_end_to_arr_end = int(elem[1]) - int(arr[1])
         # Case: complete overlap (elem smaller than arr)
-        elif elem_start_to_arr_start >= 0 and elem_end_to_arr_end <= 0:
+        if elem_start_to_arr_start >= 0 and elem_end_to_arr_end <= 0:
             overlap[i] = min(arr_len, elem_len)
         # Case: complete overlap (elem larger than arr)
         elif elem_start_to_arr_start <= 0 and elem_end_to_arr_end >= 0:
@@ -178,9 +178,9 @@ def get_overlap(arr, list_arrays):
 
 def find_best_node_match(arr, list_arrays):
     # Check for perfect match
-    idx = arr_in_list(arr, list_arrays)
-    if idx is not None:
-        return idx
+    # idx = arr_in_list(arr, list_arrays)
+    # if idx is not None:
+    #     return idx
     # Find node with most overlap
     try:
         overlap = get_overlap(arr, list_arrays)
@@ -499,3 +499,202 @@ def getFeatures(outfile, datadir, recompute=False):
     pickle.dump(features, open(outfile, 'wb'))
 
     return features
+
+
+
+
+""""""""""""" Lab 6 """""""""""""
+from helper_functions_NER import tokenize
+
+def get_sentence_tokens(text: str, entities: dict, e1: str, e2: str) -> tuple:
+    # TODO: Add lemma, PoS, etc.
+    tokens = tokenize(text)
+    # extract token offsets
+    t_offsets = [np.array((token[1:])) for token in tokens]
+    tokens = [token[0] for token in tokens]
+
+    # match entities to token
+    for e in entities.keys():
+        e_offset = np.array(entities[e])
+        t_idx = find_best_node_match(e_offset, t_offsets)
+        if e == e1:
+            tokens[t_idx] = '<DRUG1>'
+        elif e == e2:
+            tokens[t_idx] = '<DRUG2>'
+        else:
+            tokens[t_idx] = '<DRUG_OTHER>'
+
+    return tokens
+
+
+def load_data(datadir):
+    '''
+    Task:   Load XML files in given directory, tokenize each sentence, and extract
+            learning examples (tokenized sentence + entity pair).
+
+    Input:  datadir: A directory containing XML files.
+
+    Output: A list of classification cases. Each case is a list containing sentence
+            id, entity1 id, entity2 id, ground truth relation label, and a list
+            of sentence tokens (each token containing any needed information: word,
+            lemma, PoS, offsets, etc).
+
+    Example:
+        >>> load_data(’data/Train’)
+            [[’DDI-DrugBank.d66.s0’, DDI-DrugBank.d66.s0.e0’, ’DDI-DrugBank.d66.s0.e1’, ’null’,
+             [(’<DRUG1>’, ’<DRUG1>’, ’<DRUG1>’), (’-’, ’-’, ’:’),
+              (’Concomitant’, ’concomitant’,’JJ’), (’use’,’use’,’NN’),
+              (’of’, ’of’, ’IN’), (’<DRUG2>’, ’<DRUG2>’, ’<DRUG2>’), (’and’, ’and’, ’CC’),
+              (’<DRUG_OTHER>’, ’<DRUG_OTHER>’, ’<DRUG_OTHER>’),
+              (’may’, ’may’, ’MD’),
+               ..., 
+              (’syndrome’, ’syndrome’, ’NN’), (’.’, ’.’, ’.’)
+            ]]
+            ...
+             [’DDI-MedLine.d94.s12’, ’DDI-MedLine.d94.s12.e1’, ’DDI-MedLine.d94.s12.e2’, ’effect’,
+             [(’The’, ’the’, ’DT’), (’uptake’, ’uptake’, ’NN’),
+              (’inhibitors’, ’inhibitor ’, ’NNS’),
+              (’<DRUG_OTHER>’, ’<DRUG_OTHER>’, ’<DRUG_OTHER>’) , (’and’, ’and’, ’CC’),
+              (’<DRUG1>’,’ <DRUG1>’,’ <DRUG1> ’) ,
+               ...,
+              (’effects’, ’effect’, ’NNS’), (’of’, ’of’, ’IN’),
+              (’<DRUG2>’, ’<DRUG2>’, ’<DRUG2>’), (’in’, ’in’, ’IN’), ...
+            ]]
+            ...
+    '''
+
+    # tokens now return offsets, but lemma PoS and possible others not included
+    classification_cases = []
+    for f in os.listdir(datadir):
+        if not f.endswith('.xml'):
+            continue
+
+        # parse XML file , obtaining a DOM tree
+        tree = parse(datadir + f)
+        # process each sentence in the file
+        sentences = tree.getElementsByTagName("sentence")
+        for s in sentences:
+            # get sentence id
+            sid = s.attributes["id"].value
+            # get sentence text
+            text = s.attributes["text"].value
+            # we're only considering pairs
+            pairs = s.getElementsByTagName("pair")
+            # load sentence entities into a dictionary
+            if len(pairs) > 0:
+                entities = {}
+                ents = s.getElementsByTagName("entity")
+                for e in ents:
+                    eid = e.attributes["id"].value
+                    entities[eid] = e.attributes["charOffset"].value.split("-")
+                # save tokens
+                for p in pairs:
+                    e1 = p.attributes['e1'].value
+                    e2 = p.attributes['e2'].value
+                    # if ddi exist, get type
+                    if p.attributes["ddi"].value == 'true':
+                        ddi = p.attributes["type"].value
+                    else:
+                        ddi = 'null'
+                    
+                    # tokenize text
+                    tokens = get_sentence_tokens(text, entities, e1, e2)
+
+                    case = [sid, e1, e2, ddi, tokens]
+                    classification_cases.append(case)
+                    
+    return classification_cases
+
+
+def create_indices(dataset, max_length):
+    '''
+    Task:   Create index dictionaries both for input (words) and output (labels)
+            from given dataset.
+
+    Input:  dataset: dataset produced by load_data.
+            max_length: maximum length of a sentence (longer sentences will
+            be cut, shorter ones will be padded).
+
+    Output: A dictionary where each key is an index name (e.g. "words", "labels"),
+            and the value is a dictionary mapping each word/label to a number.
+            An entry with the value for maxlen is also stored
+    Example:
+        >>> create_indexs(traindata)
+            {’words’: {’<PAD>’:0, ’<UNK>’:1, ’11-day’:2, ’murine’:3, ’criteria’:4,
+            ’stroke’:5,...,’levodopa’:8511, ’terfenadine’:8512}
+            ’labels’: {’null’:0, ’mechanism’:1, ’advise’:2, ’effect’:3, ’int’:4}
+            ’maxlen’: 100
+            }
+    '''
+    words = {
+        '<PAD>': 0,
+        '<UNK>': 1
+    }
+
+    # TODO: Add lemmas, PoS, etc.
+    # iterate over all tokens
+    counter = 2
+    for ddi in dataset:
+        for token in ddi[4]:
+            if not token in words.keys():
+                words[token] = counter
+                counter += 1
+
+    labels = {
+        'null': 0,
+        'mechanism': 1,
+        'advise': 2,
+        'effect': 3,
+        'int': 4
+    }
+
+    idx = {
+        'words': words,
+        'labels': labels,
+        'maxlen': max_length
+    }
+
+    return idx
+
+
+def encode(dataset, idx):
+    words_encoded = np.zeros((len(dataset), 100))
+    labels_encoded = np.zeros((len(dataset),))
+
+    # iterate sentences
+    for i, item in enumerate(dataset):
+        for j, word in enumerate(item[4]):
+            if word[0] in idx['words'].keys():
+                words_encoded[i, j] = idx['words'][word[0]]
+            else:
+                words_encoded[i, j] = 1      # Word unknown
+            # shorten long sentences
+            if j >= idx['maxlen'] - 1:
+                break
+        # encode label
+        labels_encoded[i] = idx['labels'][item[3]]
+
+    return words_encoded, labels_encoded
+
+
+def output_entities(dataset, preds, outfile) -> None:
+    '''
+    Task: Output detected DDIs in the format expected by the evaluator
+
+    Input:
+        dataset: A dataset produced by load_data.
+        preds: For each sentence in dataset, a label for its DDI type (or ’null’ if no DDI detected)
+
+    Output:
+        prints the detected interactions to stdout in the format required by the evaluator.
+
+    Example:
+        >>> output_interactions(dataset , preds) 
+            DDI-DrugBank.d398.s0|DDI-DrugBank.d398.s0.e0|DDI-DrugBank.d398.s0.e1|effect 
+            DDI-DrugBank.d398.s0|DDI-DrugBank.d398.s0.e0|DDI-DrugBank.d398.s0.e2|effect 
+            DDI-DrugBank.d211.s2|DDI-DrugBank.d211.s2.e0|DDI-DrugBank.d211.s2.e5|mechanism 
+            ...
+    '''
+    for y_pred, data in zip(preds, dataset):
+        with open(outfile, 'a') as f:
+            print(data[0] + "|" + data[1] + "|" + data[2] + "|" + y_pred, file=f)

@@ -8,19 +8,15 @@ from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 
 sys.path.append(sys.path[0] + '/../common/')
-from helper_functions_NER import load_data, create_indices, encode, output_entities
-from neural_network_NER import build_network, save_model_and_indices, load_model_and_indices
+from helper_functions_DDI import load_data, create_indices, encode, output_entities
+from neural_network_DDI import build_network, save_model_and_indices, load_model_and_indices
 
-
-# you can comment out this, it just sets my path to the root folder
-# sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
-
-learn = True
+learn = False
 predict = True
 
 # Parameters
 MAX_LEN = 100
-MODEL_NAME = 'LSTM_NER'
+MODEL_NAME = 'LSTM_DDI'
 
 # parse arguments
 trainDir = sys.argv[1]
@@ -36,12 +32,11 @@ if learn:
     # load training data in a suitable form
     trainData = load_data(trainDir)
 
-    # encode datasets
     idx = create_indices(trainData, MAX_LEN)
     X, y = encode(trainData, idx)
 
     # convert to one-hot encoding
-    y = np.array([to_categorical(i, num_classes=10) for i in y])
+    y = np.array([to_categorical(i, num_classes=5) for i in y])
 
     # split into training and validation
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15)
@@ -71,10 +66,10 @@ if predict:
 
     # get most likely tag for each word
     tags = list(idx['labels'].keys())
-    y_pred = [[tags[np.argmax(y)] for y in s] for s in y_pred]
+    y_pred = [tags[np.argmax(y)] for y in y_pred]
 
     # extract entities and write output file
-    outfile = 'NER_' + timestampStr + '.out' if learn else 'changeName.out'
+    outfile = 'DDI_' + timestampStr + '.out' if learn else 'changeName.out'
     output_entities(valData, y_pred, 'logs/' + outfile)
 
     # evaluate using official evaluator

@@ -8,7 +8,7 @@ from tensorflow.python.keras.models import Sequential
 from tensorflow_addons.text import crf_log_likelihood, crf_decode
 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, Input
+from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, InputLayer
 
 
 class CRF(L.Layer):
@@ -140,8 +140,8 @@ def build_network(idx, verbose=True):
     hidden_size = 128
 
     model = Sequential()
-    model.add(Input(shape=(max_len,)))
-    # 100-dim embedding
+    model.add(InputLayer(input_shape=(max_len,)))
+    # 50-dim embedding
     model.add(Embedding(input_dim=n_words, output_dim=embedding_size,
                         input_length=max_len, mask_zero=True))
     # variational biLSTM
@@ -153,7 +153,9 @@ def build_network(idx, verbose=True):
     crf = CRF(n_labels, sparse_target=True)
     model.add(crf)
 
-    model.compile(optimizer='adam', loss=crf.loss, metrics=[crf.accuracy])
+    model.compile(optimizer='adam', 
+                  loss=crf.loss, 
+                  metrics=[crf.accuracy])
     
     if verbose:
         model.summary()
@@ -177,7 +179,7 @@ def save_model_and_indices(model, idx, filename):
         os.makedirs('models')
 
     # Save model
-    model.save_weights('models/' + filename + '.nn')
+    model.save_weights('models/' + filename)
 
     # Save indexes
     with open('models/' + filename + '.idx', 'wb') as f:
@@ -200,6 +202,6 @@ def load_model_and_indices(filename):
 
     # create model from loaded weights
     model = build_network(idx, verbose=False)
-    model.load_weights('models/' + filename + '.nn')
+    model.load_weights('models/' + filename)
 
     return model, idx
