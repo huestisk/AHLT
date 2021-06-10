@@ -5,7 +5,7 @@ from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import InputLayer, Embedding, Conv1D, GlobalMaxPooling1D, Dense
 
-def build_network(idx, verbose=True):
+def build_network(idx, full_parse=False, verbose=True):
     '''
     Task: Create network for the learner.
 
@@ -19,7 +19,7 @@ def build_network(idx, verbose=True):
     # sizes
     n_words = len(idx['words'])
     n_labels = len(idx['labels'])
-    max_len = idx['maxlen']
+    max_len = idx['maxlen'] if not full_parse else idx['maxlen'] * 3
 
     embedding_dim = 50
     hidden_size = 128
@@ -85,19 +85,4 @@ def load_model_and_indices(filename):
     return model, idx
 
 
-# def create_embedding_matrix(filepath, word_index, embedding_dim):
-#     vocab_size = len(word_index) + 1
-#     # Adding again 1 because of reserved 0 index
-#     embedding_matrix = np.zeros((vocab_size, embedding_dim))
-
-#     with open(filepath) as f:
-#         for line in f:
-#             word, *vector = line.split()
-#             if word in word_index:
-#                 idx = word_index[word]
-#                 embedding_matrix[idx] = np.array(
-#                                         vector, dtype=np.float32)
-#                                         [:embedding_dim]
-
-#     return embedding_matrix
 

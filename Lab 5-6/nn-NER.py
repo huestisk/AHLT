@@ -55,7 +55,7 @@ if learn:
     with open(logfile, 'w') as f:
         with redirect_stdout(f):
             model.summary()
-        print('\n\n',file=f)
+        print('\n',file=f)
 
     # train model
     history = model.fit(X_train, y_train, epochs=5, validation_data=(

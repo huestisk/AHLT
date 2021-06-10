@@ -145,8 +145,8 @@ def get_overlap(arr, list_arrays):
     overlap = np.zeros((len(list_arrays),))
     # Get overlap for each element
     for i, elem in enumerate(list_arrays):
-        # if 'None' in elem:
-        #     continue
+        if 'None' in elem:
+            continue
         # Case: elem ends before arr starts
         elem_end_to_arr_start = int(elem[1]) - int(arr[0])
         if elem_end_to_arr_start < 0:
@@ -476,8 +476,7 @@ def getFeatures(outfile, datadir, recompute=False):
             # load sentence entities into a dictionary
             entities = {}
             for e in s.getElementsByTagName("entity"):
-                entities[e.attributes["id"].value] = e.attributes["charOffset"].value.split(
-                    "-")
+                entities[e.attributes["id"].value] = e.attributes["charOffset"].value.split("-")
             # get DDI
             for p in pairs:
                 id_e1 = p.attributes["e1"].value
@@ -506,8 +505,10 @@ def getFeatures(outfile, datadir, recompute=False):
 """"""""""""" Lab 6 """""""""""""
 from helper_functions_NER import tokenize
 
-def get_sentence_tokens(text: str, entities: dict, e1: str, e2: str) -> tuple:
-    # TODO: Add lemma, PoS, etc.
+def get_sentence_tokens(text: str, entities: dict, e1: str, e2: str) -> list:
+    '''
+    Compute sentence tokens by parsing and masking entities.
+    '''
     tokens = tokenize(text)
     # extract token offsets
     t_offsets = [np.array((token[1:])) for token in tokens]
@@ -527,7 +528,41 @@ def get_sentence_tokens(text: str, entities: dict, e1: str, e2: str) -> tuple:
     return tokens
 
 
-def load_data(datadir):
+def get_tree_tokens(analysis, entities: dict, e1: str, e2: str) -> list:
+
+    # Extract Node offsets
+    nodes = analysis.nodes
+    n_offsets = [np.array((nodes[idx]['start'], nodes[idx]['end'])).astype(
+        str) for idx in nodes if idx is not None]
+
+    # Get node IDs for entities
+    ids = dict()
+    for e in entities:
+        e_offset = np.array(entities[e])
+        n_idx = find_best_node_match(e_offset, n_offsets)
+        n_key = list(nodes.keys())[n_idx]
+        if n_key != 0:
+            ids[e] = nodes[n_key]['address']
+        else:
+            # FIXME: match not found because dependency tree is faulty...
+            # Faulty documents: d15.s0, d68.s0, d4.s0, d134.s0
+            return None     # raise Exception("Match not found.")
+
+    # convert to token
+    tokens = [(nodes[i]['word'], nodes[i]['lemma'], nodes[i]['tag']) for i in range(len(nodes))]
+
+    for key, id in ids.items():
+        if key == e1:
+            tokens[id] = ('<DRUG1>', '<DRUG1>', '<DRUG1>')
+        elif key == e2:
+            tokens[id] = ('<DRUG2>', '<DRUG2>', '<DRUG2>')
+        else:
+            tokens[id] = ('<DRUG_OTHER>', '<DRUG_OTHER>', '<DRUG_OTHER>')
+
+    return tokens[1:]
+
+
+def load_data(datadir, full_parse=False):
     '''
     Task:   Load XML files in given directory, tokenize each sentence, and extract
             learning examples (tokenized sentence + entity pair).
@@ -562,13 +597,26 @@ def load_data(datadir):
             ]]
             ...
     '''
-
-    # tokens now return offsets, but lemma PoS and possible others not included
     classification_cases = []
+    data_type = datadir.split('/')[1]
+    filename = 'data/DDI_{}_'.format(data_type) 
+    filename += 'full_parse.pkl' if full_parse else '.pkl'
+
+    try:
+        with open(filename, 'rb') as f:
+            classification_cases = pickle.load(f)
+            return classification_cases
+    except (FileNotFoundError, EOFError):
+        if not yes_or_no("Could not find DDI data. Reparse?"):
+            raise Exception
+
+    # parse as dependency tree
+    if full_parse:
+        info = getInfo(datadir)
+    
     for f in os.listdir(datadir):
         if not f.endswith('.xml'):
             continue
-
         # parse XML file , obtaining a DOM tree
         tree = parse(datadir + f)
         # process each sentence in the file
@@ -580,8 +628,13 @@ def load_data(datadir):
             text = s.attributes["text"].value
             # we're only considering pairs
             pairs = s.getElementsByTagName("pair")
+
             # load sentence entities into a dictionary
             if len(pairs) > 0:
+                # get dependency tree
+                if full_parse:
+                    analysis = info[sid].getDependencyGraph()
+                # get entities
                 entities = {}
                 ents = s.getElementsByTagName("entity")
                 for e in ents:
@@ -592,17 +645,24 @@ def load_data(datadir):
                     e1 = p.attributes['e1'].value
                     e2 = p.attributes['e2'].value
                     # if ddi exist, get type
+                    gold = 'null'
                     if p.attributes["ddi"].value == 'true':
-                        ddi = p.attributes["type"].value
-                    else:
-                        ddi = 'null'
+                        gold = p.attributes["type"].value
                     
                     # tokenize text
-                    tokens = get_sentence_tokens(text, entities, e1, e2)
+                    if full_parse:
+                        tokens = get_tree_tokens(analysis, entities, e1, e2)
+                    else:
+                        # parse only words (not lemma, PoS)
+                        tokens = get_sentence_tokens(text, entities, e1, e2)
 
-                    case = [sid, e1, e2, ddi, tokens]
+                    case = [sid, e1, e2, gold, tokens]
                     classification_cases.append(case)
-                    
+
+    # save parse
+    with open(filename, 'wb') as f:
+        pickle.dump(classification_cases, file=f)
+
     return classification_cases
 
 
@@ -631,14 +691,25 @@ def create_indices(dataset, max_length):
         '<UNK>': 1
     }
 
-    # TODO: Add lemmas, PoS, etc.
+    def add_to_words(token, counter: int) -> int:
+        if isinstance(token, str) and not token in words.keys():
+            words[token] = counter
+            counter += 1
+        elif isinstance(token, tuple):
+            for t in token:
+                counter = add_to_words(t, counter)
+        elif not isinstance(token, str):
+            raise RuntimeError
+
+        return counter
+
     # iterate over all tokens
     counter = 2
     for ddi in dataset:
+        if ddi[4] is None:      # TODO: Count how many are corrupt
+            continue
         for token in ddi[4]:
-            if not token in words.keys():
-                words[token] = counter
-                counter += 1
+            counter = add_to_words(token, counter)
 
     labels = {
         'null': 0,
@@ -658,16 +729,20 @@ def create_indices(dataset, max_length):
 
 
 def encode(dataset, idx):
-    words_encoded = np.zeros((len(dataset), 100))
+    num_tokens = len(dataset[0][4][0])
+    words_encoded = np.zeros((len(dataset), idx['maxlen'] * num_tokens))
     labels_encoded = np.zeros((len(dataset),))
 
     # iterate sentences
     for i, item in enumerate(dataset):
+        if item[4] is None:
+            continue
         for j, word in enumerate(item[4]):
-            if word[0] in idx['words'].keys():
-                words_encoded[i, j] = idx['words'][word[0]]
-            else:
-                words_encoded[i, j] = 1      # Word unknown
+            for k, token in enumerate(word):
+                if token in idx['words'].keys():
+                    words_encoded[i, j*num_tokens + k] = idx['words'][token]
+                else:
+                    words_encoded[i, j*num_tokens + k] = 1      # Word unknown
             # shorten long sentences
             if j >= idx['maxlen'] - 1:
                 break
