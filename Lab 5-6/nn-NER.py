@@ -1,8 +1,11 @@
-#from eval.evaluator import evaluate
-
 import sys
 import numpy as np
+import pandas as pd
 from datetime import datetime
+from contextlib import redirect_stdout
+
+sys.path.append(sys.path[0] + '/../eval/')
+from evaluate import evaluate
 
 from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
@@ -29,7 +32,7 @@ testDir = sys.argv[2]
 # timestamp
 dateTimeObj = datetime.now()
 timestampStr = dateTimeObj.strftime("%Y-%b-%d-%H:%M")
-# TODO: log training
+logfile = 'logs/NER_' + timestampStr + '.log'
 
 """ Learn """
 if learn:
@@ -49,9 +52,17 @@ if learn:
     # build network
     model = build_network(idx)
 
+    with open(logfile, 'w') as f:
+        with redirect_stdout(f):
+            model.summary()
+        print('\n\n',file=f)
+
     # train model
-    model.fit(X_train, y_train, epochs=5, validation_data=(
+    history = model.fit(X_train, y_train, epochs=5, validation_data=(
         X_test, y_test), validation_steps=1, verbose=2)
+
+    hist_df = pd.DataFrame(history.history)
+    hist_df.to_csv(logfile, mode='a', encoding='utf-8')
 
     # save model and indices, for later use in prediction
     save_model_and_indices(model, idx, MODEL_NAME)
@@ -78,5 +89,5 @@ if predict:
     output_entities(valData, y_pred, 'logs/' + outfile)
 
     # evaluate using official evaluator
-    # evaluation(datadir, outfile)
+    evaluate('NER', testDir, outfile)
 
