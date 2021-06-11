@@ -32,7 +32,7 @@ def build_network(idx, full_parse=False, verbose=True):
 
     # LSTM Layers
     for _ in range(NUM_LSTM):
-        model.add(Bidirectional(LSTM(units=HIDDEN_SIZE, return_sequences=True, recurrent_dropout=0.1)))
+        model.add(Bidirectional(LSTM(units=HIDDEN_SIZE, return_sequences=True)))
     else:
         model.add(GlobalMaxPooling1D())
         model.add(Dense(HIDDEN_SIZE, activation='relu'))

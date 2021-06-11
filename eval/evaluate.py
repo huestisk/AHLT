@@ -1,7 +1,6 @@
 import os
 import platform
 import subprocess
-from contextlib import redirect_stdout
 
 cwd = os.getcwd()
 
@@ -38,5 +37,5 @@ def evaluate(type: str, datadir: str, outfile: str) -> None:
             print('\n\nResults:\nTODO', file=f)
 
 if __name__ == "__main__":
-    evaluate('DDI', 'data/devel', 'DDI_2021-Jun-11-1523.out')
+    evaluate('DDI', 'data/devel', 'DDI_2021-Jun-11-1714.out')
     # evaluate('NER', 'data/devel', 'NER_2021-Jun-11-1038.out')
