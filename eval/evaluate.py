@@ -36,5 +36,5 @@ def evaluate(type: str, datadir: str, outfile: str) -> None:
             print('\n\nResults:\nTODO', file=f)
 
 if __name__ == "__main__":
-    evaluate('DDI', 'data/devel', 'DDI_2021-Jun-10-14:39.out')
-    evaluate('NER', 'data/devel', 'NER_2021-Jun-10-14:33.out')
+    # evaluate('DDI', 'data/devel', 'DDI_2021-Jun-11-1029.out')
+    evaluate('NER', 'data/devel', 'NER_2021-Jun-11-1327.out')

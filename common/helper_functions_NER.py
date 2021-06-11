@@ -411,6 +411,8 @@ def output_entities(dataset, preds, outfile):
         sid, tokens = data
         pred = Prediction(sid)
         for idx, token in enumerate(tokens):
+            if idx >= len(y_sen):
+                break
             # get prediction
             label = y_sen[idx]
 

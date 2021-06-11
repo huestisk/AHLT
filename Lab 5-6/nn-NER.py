@@ -18,15 +18,17 @@ from neural_network_NER import build_network, save_model_and_indices, load_model
 # you can comment out this, it just sets my path to the root folder
 # sys.path.append('/Users/betty/Desktop/AHLT/AHLT')
 
-learn = True
+learn = False
 predict = True
 
 # Parameters
 MAX_LEN = 100
 MODEL_NAME = 'LSTM_NER'
+EPOCHS = 20
 
 # parse arguments
 trainDir = sys.argv[1]
+# valDir = 'data/devel/'
 testDir = sys.argv[2]
 
 # timestamp
@@ -48,6 +50,11 @@ if learn:
 
     # split into training and validation
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15)
+    # X_train = X
+    # y_train = y
+    # valData = load_data(valDir)
+    # X_test, y_test = encode(valData, idx)
+    # y_test = np.array([to_categorical(i, num_classes=10) for i in y_test])
 
     # build network
     model = build_network(idx)
@@ -58,7 +65,7 @@ if learn:
         print('\n',file=f)
 
     # train model
-    history = model.fit(X_train, y_train, epochs=5, validation_data=(
+    history = model.fit(X_train, y_train, epochs=EPOCHS, validation_data=(
         X_test, y_test), validation_steps=1, verbose=2)
 
     hist_df = pd.DataFrame(history.history)

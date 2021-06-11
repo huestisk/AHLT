@@ -27,9 +27,9 @@ def build_network(idx, full_parse=False, verbose=True):
     model = Sequential()
     model.add(InputLayer(input_shape=(max_len,)))
     model.add(Embedding(input_dim=n_words, output_dim=embedding_dim, input_length=max_len))
-    model.add(Conv1D(hidden_size, 5, activation='relu'))
+    model.add(Conv1D(filters=hidden_size, kernel_size=5, activation='relu'))
     model.add(GlobalMaxPooling1D())
-    model.add(Dense(10, activation='relu'))
+    model.add(Dense(hidden_size, activation='relu'))
     model.add(Dense(n_labels, activation='sigmoid'))
 
     model.compile(optimizer='adam',

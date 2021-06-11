@@ -8,8 +8,12 @@ from tensorflow.python.keras.models import Sequential
 from tensorflow_addons.text import crf_log_likelihood, crf_decode
 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Embedding, Dense, TimeDistributed, Bidirectional, InputLayer
+from tensorflow.keras.layers import LSTM, Embedding, Dense, Bidirectional, InputLayer
 
+EMBEDDING_SIZE = 40
+HIDDEN_SIZE = 40
+NUM_LSTM = 3
+GPU = len(tf.config.list_physical_devices('GPU')) > 0
 
 class CRF(L.Layer):
     def __init__(self,
@@ -136,19 +140,21 @@ def build_network(idx, verbose=True):
     n_labels = len(idx['labels'])
     max_len = idx['maxlen']
 
-    embedding_size = 50
-    hidden_size = 128
-
     model = Sequential()
     model.add(InputLayer(input_shape=(max_len,)))
     # 50-dim embedding
-    model.add(Embedding(input_dim=n_words, output_dim=embedding_size,
+    model.add(Embedding(input_dim=n_words, output_dim=EMBEDDING_SIZE,
                         input_length=max_len, mask_zero=True))
     # variational biLSTM
-    model.add(Bidirectional(LSTM(units=hidden_size,
+    for _ in range(NUM_LSTM):
+        if GPU:
+            model.add(Bidirectional(LSTM(units=HIDDEN_SIZE,
+                                 return_sequences=True, recurrent_dropout=0.1))) # CuDNNLSTM
+        else:
+            model.add(Bidirectional(LSTM(units=HIDDEN_SIZE,
                                  return_sequences=True, recurrent_dropout=0.1)))
     # dense layer
-    model.add(TimeDistributed(Dense(n_labels, activation="relu")))
+    model.add(Dense(n_labels, activation="relu"))
     # CRF layer
     crf = CRF(n_labels, sparse_target=True)
     model.add(crf)
