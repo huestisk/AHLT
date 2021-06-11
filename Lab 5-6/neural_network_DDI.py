@@ -5,9 +5,9 @@ from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import InputLayer, Embedding, Conv1D, GlobalMaxPooling1D, Dense, Bidirectional, LSTM
 
-EMBEDDING_SIZE = 40
+EMBEDDING_SIZE = 75
 HIDDEN_SIZE = 40
-NUM_LSTM = 1
+NUM_LSTM = 0
 
 def build_network(idx, full_parse=False, verbose=True):
     '''

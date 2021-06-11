@@ -14,17 +14,18 @@ sys.path.append(sys.path[0] + '/../common/')
 from helper_functions_DDI import load_data, create_indices, encode, output_entities
 from neural_network_DDI import build_network, save_model_and_indices, load_model_and_indices
 
-learn = True
+learn = False
 predict = True
 
 # Parameters
 MAX_LEN = 100
 MODEL_NAME = 'LSTM_DDI'
 FULL_PARSE = True
-EPOCHS = 20
+EPOCHS = 15
 
 # parse arguments
 trainDir = sys.argv[1]
+# valDir = 'data/devel/'
 testDir = sys.argv[2]
 
 # timestamp
@@ -45,6 +46,11 @@ if learn:
 
     # split into training and validation
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15)
+    # X_train = X
+    # y_train = y
+    # valData = load_data(valDir, full_parse=FULL_PARSE)
+    # X_test, y_test = encode(valData, idx)
+    # y_test = np.array([to_categorical(i, num_classes=5) for i in y_test])
 
     # build network
     model = build_network(idx, full_parse=FULL_PARSE)
