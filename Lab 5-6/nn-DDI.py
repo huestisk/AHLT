@@ -28,7 +28,7 @@ testDir = sys.argv[2]
 
 # timestamp
 dateTimeObj = datetime.now()
-timestampStr = dateTimeObj.strftime("%Y-%b-%d-%H:%M")
+timestampStr = dateTimeObj.strftime("%Y-%b-%d-%H%M")
 logfile = 'logs/DDI_' + timestampStr + '.log'
 
 """ Learn """
