@@ -3,10 +3,11 @@ import pickle
 from tensorflow import keras
 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import InputLayer, Embedding, Conv1D, GlobalMaxPooling1D, Dense
+from tensorflow.keras.layers import InputLayer, Embedding, Conv1D, GlobalMaxPooling1D, Dense, Bidirectional, LSTM
 
 EMBEDDING_SIZE = 40
 HIDDEN_SIZE = 40
+NUM_LSTM = 1
 
 def build_network(idx, full_parse=False, verbose=True):
     '''
@@ -28,10 +29,16 @@ def build_network(idx, full_parse=False, verbose=True):
     model.add(InputLayer(input_shape=(max_len,)))
     model.add(Embedding(input_dim=n_words, output_dim=EMBEDDING_SIZE, input_length=max_len))
     model.add(Conv1D(filters=HIDDEN_SIZE, kernel_size=5, activation='relu'))
-    model.add(GlobalMaxPooling1D())
-    model.add(Dense(HIDDEN_SIZE, activation='relu'))
-    model.add(Dense(n_labels, activation='sigmoid'))
 
+    # LSTM Layers
+    for _ in range(NUM_LSTM):
+        model.add(Bidirectional(LSTM(units=HIDDEN_SIZE, return_sequences=True, recurrent_dropout=0.1)))
+    else:
+        model.add(GlobalMaxPooling1D())
+        model.add(Dense(HIDDEN_SIZE, activation='relu'))
+    
+    model.add(Dense(n_labels, activation='sigmoid'))
+    
     model.compile(optimizer='adam',
                   loss='categorical_crossentropy',
                   metrics=['acc'])
