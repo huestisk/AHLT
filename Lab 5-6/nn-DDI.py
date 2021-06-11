@@ -14,7 +14,7 @@ sys.path.append(sys.path[0] + '/../common/')
 from helper_functions_DDI import load_data, create_indices, encode, output_entities
 from neural_network_DDI import build_network, save_model_and_indices, load_model_and_indices
 
-learn = False
+learn = True
 predict = True
 
 # Parameters
