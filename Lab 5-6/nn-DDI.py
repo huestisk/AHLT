@@ -21,6 +21,7 @@ predict = True
 MAX_LEN = 100
 MODEL_NAME = 'LSTM_DDI'
 FULL_PARSE = True
+EPOCHS = 20
 
 # parse arguments
 trainDir = sys.argv[1]
@@ -54,7 +55,7 @@ if learn:
         print('\n',file=f)
 
     # train model
-    history = model.fit(X_train, y_train, epochs=5, validation_data=(
+    history = model.fit(X_train, y_train, epochs=EPOCHS, validation_data=(
         X_test, y_test), validation_steps=1, verbose=2)
 
     hist_df = pd.DataFrame(history.history)

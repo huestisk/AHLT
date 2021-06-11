@@ -5,6 +5,9 @@ from tensorflow import keras
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import InputLayer, Embedding, Conv1D, GlobalMaxPooling1D, Dense
 
+EMBEDDING_SIZE = 40
+HIDDEN_SIZE = 40
+
 def build_network(idx, full_parse=False, verbose=True):
     '''
     Task: Create network for the learner.
@@ -21,15 +24,12 @@ def build_network(idx, full_parse=False, verbose=True):
     n_labels = len(idx['labels'])
     max_len = idx['maxlen'] if not full_parse else idx['maxlen'] * 3
 
-    embedding_dim = 50
-    hidden_size = 128
-
     model = Sequential()
     model.add(InputLayer(input_shape=(max_len,)))
-    model.add(Embedding(input_dim=n_words, output_dim=embedding_dim, input_length=max_len))
-    model.add(Conv1D(filters=hidden_size, kernel_size=5, activation='relu'))
+    model.add(Embedding(input_dim=n_words, output_dim=EMBEDDING_SIZE, input_length=max_len))
+    model.add(Conv1D(filters=HIDDEN_SIZE, kernel_size=5, activation='relu'))
     model.add(GlobalMaxPooling1D())
-    model.add(Dense(hidden_size, activation='relu'))
+    model.add(Dense(HIDDEN_SIZE, activation='relu'))
     model.add(Dense(n_labels, activation='sigmoid'))
 
     model.compile(optimizer='adam',

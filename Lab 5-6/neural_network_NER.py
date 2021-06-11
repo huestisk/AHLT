@@ -13,7 +13,7 @@ from tensorflow.keras.layers import LSTM, Embedding, Dense, Bidirectional, Input
 EMBEDDING_SIZE = 40
 HIDDEN_SIZE = 40
 NUM_LSTM = 3
-GPU = len(tf.config.list_physical_devices('GPU')) > 0
+
 
 class CRF(L.Layer):
     def __init__(self,
@@ -147,11 +147,7 @@ def build_network(idx, verbose=True):
                         input_length=max_len, mask_zero=True))
     # variational biLSTM
     for _ in range(NUM_LSTM):
-        if GPU:
-            model.add(Bidirectional(LSTM(units=HIDDEN_SIZE,
-                                 return_sequences=True, recurrent_dropout=0.1))) # CuDNNLSTM
-        else:
-            model.add(Bidirectional(LSTM(units=HIDDEN_SIZE,
+        model.add(Bidirectional(LSTM(units=HIDDEN_SIZE,
                                  return_sequences=True, recurrent_dropout=0.1)))
     # dense layer
     model.add(Dense(n_labels, activation="relu"))
