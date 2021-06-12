@@ -599,8 +599,8 @@ def load_data(datadir, full_parse=False):
     '''
     classification_cases = []
     data_type = datadir.split('/')[1]
-    filename = 'data/DDI_{}_'.format(data_type) 
-    filename += 'full_parse.pkl' if full_parse else '.pkl'
+    filename = 'data/DDI_{}'.format(data_type) 
+    filename += '_full_parse.pkl' if full_parse else '.pkl'
 
     try:
         with open(filename, 'rb') as f:
@@ -738,11 +738,17 @@ def encode(dataset, idx):
         if item[4] is None:
             continue
         for j, word in enumerate(item[4]):
-            for k, token in enumerate(word):
-                if token in idx['words'].keys():
-                    words_encoded[i, j*num_tokens + k] = idx['words'][token]
-                else:
-                    words_encoded[i, j*num_tokens + k] = 1      # Word unknown
+
+            if isinstance(word, str) and word in idx['words'].keys():
+                words_encoded[i, j] = idx['words'][word]
+            elif isinstance(word, str):
+                words_encoded[i, j] = 1
+            elif isinstance(word, tuple):
+                for k, token in enumerate(word):
+                    if token in idx['words'].keys():
+                        words_encoded[i, j*num_tokens + k] = idx['words'][token]
+                    else:
+                        words_encoded[i, j*num_tokens + k] = 1      # Word unknown
             # shorten long sentences
             if j >= idx['maxlen'] - 1:
                 break
